@@ -67,6 +67,10 @@
                 <label for="admin-archivo-inicio">Adjuntar Imagen o Video opcional:</label>
                 <input type="file" id="admin-archivo-inicio" accept="image/*,video/*">
                 <button class="btn-actualizar" onclick="publicarInicio(event)">Publicar en Inicio</button>
+                <h3 style="margin: 18px 0 8px; color: #334155;">Publicaciones existentes</h3>
+                <div id="lista-admin-inicio" aria-live="polite">
+                    <p style="color: #64748b; font-size: 14px;">Cargando publicaciones...</p>
+                </div>
             </div>
 
             <!-- 2. SECCIÓN VIDA -->
@@ -139,14 +143,6 @@
                 </div>
                 <p id="aviso-eliminar-contacto" style="color:#64748b; font-size:13px;">Vacía WhatsApp, correo, Messenger y TikTok; dejarán de mostrarse a los visitantes.</p>
                 <p id="estado-contacto-admin" aria-live="polite" style="color:#475569; font-size:14px;"></p>
-            </div>
-
-            <!-- GESTOR GENERAL DE ELEMENTOS -->
-            <div class="admin-card">
-                <h2>⚙️ Gestionar Publicaciones Activas</h2>
-                <div id="lista-admin-inicio">
-                    <p style="color: #64748b; font-size: 14px;">Cargando...</p>
-                </div>
             </div>
 
         </div>
