@@ -1171,3 +1171,122 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* Formulario de mensajes de visitantes */
+.formulario-contacto {
+    margin-top: 28px;
+    padding: 24px;
+    background: #ffffff;
+    border: 1px solid #dbe4f0;
+    border-radius: 12px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
+}
+
+.formulario-contacto h3 {
+    margin: 0 0 6px;
+    color: #0b1f4d;
+    font-size: 19px;
+}
+
+.formulario-contacto-intro,
+.nota-privacidad-contacto {
+    color: #64748b;
+    font-size: 13px;
+}
+
+.formulario-contacto-intro {
+    margin: 0 0 18px;
+}
+
+.form-mensaje-contacto {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.campo-mensaje-contacto {
+    display: grid;
+    gap: 6px;
+}
+
+.campo-mensaje-contacto-ancho,
+.form-mensaje-contacto .btn-enviar-mensaje {
+    grid-column: 1 / -1;
+}
+
+.campo-mensaje-contacto label {
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.campo-mensaje-contacto input,
+.campo-mensaje-contacto textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #1e293b;
+    background: #ffffff;
+    font: inherit;
+}
+
+.campo-mensaje-contacto input:focus,
+.campo-mensaje-contacto textarea:focus {
+    border-color: #2563eb;
+    outline: 3px solid rgba(37, 99, 235, 0.14);
+}
+
+.campo-mensaje-contacto textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.campo-trampa-contacto {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.form-mensaje-contacto .btn-enviar-mensaje:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.estado-mensaje-contacto {
+    min-height: 1.5em;
+    margin: 12px 0 0;
+    color: #475569;
+    font-size: 14px;
+}
+
+.estado-mensaje-contacto-exito {
+    color: #166534;
+}
+
+.estado-mensaje-contacto-error {
+    color: #b91c1c;
+}
+
+.nota-privacidad-contacto {
+    margin: 6px 0 0;
+}
+
+@media (max-width: 560px) {
+    .formulario-contacto {
+        padding: 18px;
+    }
+
+    .form-mensaje-contacto {
+        grid-template-columns: 1fr;
+    }
+
+    .campo-mensaje-contacto-ancho,
+    .form-mensaje-contacto .btn-enviar-mensaje {
+        grid-column: auto;
+    }
+}

@@ -1332,6 +1332,79 @@ def eliminar_contacto_publico() -> Any:
         return respuesta_error(str(error), 500)
 
 
+@app.route("/api/mensajes-contacto", methods=["POST"])
+def crear_mensaje_contacto() -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("El servicio de mensajes no está configurado.", 503)
+
+    if request.content_length and request.content_length > 16 * 1024:
+        return respuesta_error("El mensaje supera el tamaño permitido.", 413)
+
+    datos = request.get_json(silent=True)
+    if not isinstance(datos, dict):
+        return respuesta_error("Los datos del formulario no son válidos.", 400)
+
+    # Honeypot: los bots que rellenan este campo reciben una respuesta normal,
+    # pero el envío no se guarda.
+    if datos.get("sitio_web"):
+        return jsonify({"success": True}), 201
+
+    nombre_completo = datos.get("nombre_completo", "")
+    apellido = datos.get("apellido", "")
+    email = datos.get("email", "")
+    telefono = datos.get("telefono", "")
+    mensaje = datos.get("mensaje", "")
+
+    if not all(isinstance(valor, str) for valor in (
+        nombre_completo, apellido, email, telefono, mensaje
+    )):
+        return respuesta_error("Completa correctamente todos los campos.", 400)
+
+    nombre_completo = re.sub(r"\s+", " ", nombre_completo).strip()
+    apellido = re.sub(r"\s+", " ", apellido).strip()
+    email = email.strip().lower()
+    telefono = re.sub(r"\s+", " ", telefono).strip()
+    mensaje = mensaje.replace("\r\n", "\n").replace("\r", "\n").strip()
+
+    if not nombre_completo or len(nombre_completo) > 120:
+        return respuesta_error("Escribe tu nombre completo (máximo 120 caracteres).", 400)
+    if not apellido or len(apellido) > 100:
+        return respuesta_error("Escribe tu apellido (máximo 100 caracteres).", 400)
+    if len(email) > 254 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
+        return respuesta_error("Escribe un correo electrónico válido.", 400)
+    if (
+        len(telefono) > 32
+        or not re.fullmatch(r"[+0-9().\- ]{7,32}", telefono)
+        or not 7 <= sum(caracter.isdigit() for caracter in telefono) <= 15
+    ):
+        return respuesta_error("Escribe un número de teléfono válido.", 400)
+    if not mensaje or len(mensaje) > 3000:
+        return respuesta_error("El mensaje debe tener entre 1 y 3000 caracteres.", 400)
+
+    fila = {
+        "nombre_completo": nombre_completo,
+        "apellido": apellido,
+        "email": email,
+        "telefono": telefono,
+        "mensaje": mensaje,
+    }
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            solicitar_supabase_admin(
+                "POST", "mensajes_contacto", json=fila
+            )
+        else:
+            supabase_admin.table("mensajes_contacto").insert(fila).execute()
+
+        return jsonify({"success": True}), 201
+
+    except Exception:
+        app.logger.exception("No se pudo guardar el mensaje de contacto.")
+        return respuesta_error("No se pudo enviar el mensaje. Inténtalo de nuevo.", 500)
+
+
 # ============================================================
 # SECCIONES EDITORIALES (VIDA / OBRA / INICIO) - TEXTO Y DOCUMENTOS
 # ============================================================

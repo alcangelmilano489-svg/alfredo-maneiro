@@ -95,6 +95,39 @@
         <div id="contacto-canales" class="contacto-canales" aria-live="polite">
             <p class="mensaje-vacio">Cargando canales de contacto...</p>
         </div>
+        <div class="formulario-contacto">
+            <h3>Envíanos un mensaje</h3>
+            <p class="formulario-contacto-intro">Completa tus datos y nos pondremos en contacto contigo. Tu información no se publicará.</p>
+            <form id="form-mensaje-contacto" class="form-mensaje-contacto">
+                <div class="campo-mensaje-contacto">
+                    <label for="contacto-nombre-completo">Nombre completo</label>
+                    <input id="contacto-nombre-completo" name="nombre_completo" type="text" autocomplete="name" maxlength="120" required>
+                </div>
+                <div class="campo-mensaje-contacto">
+                    <label for="contacto-apellido">Apellido</label>
+                    <input id="contacto-apellido" name="apellido" type="text" autocomplete="family-name" maxlength="100" required>
+                </div>
+                <div class="campo-mensaje-contacto">
+                    <label for="contacto-email-visitante">Correo electrónico</label>
+                    <input id="contacto-email-visitante" name="email" type="email" autocomplete="email" maxlength="254" required>
+                </div>
+                <div class="campo-mensaje-contacto">
+                    <label for="contacto-telefono">Número de teléfono</label>
+                    <input id="contacto-telefono" name="telefono" type="tel" autocomplete="tel" maxlength="32" required>
+                </div>
+                <div class="campo-mensaje-contacto campo-mensaje-contacto-ancho">
+                    <label for="contacto-mensaje-visitante">Mensaje</label>
+                    <textarea id="contacto-mensaje-visitante" name="mensaje" maxlength="3000" required></textarea>
+                </div>
+                <div class="campo-trampa-contacto" aria-hidden="true">
+                    <label for="contacto-sitio-web">Deja este campo vacío</label>
+                    <input id="contacto-sitio-web" name="sitio_web" type="text" tabindex="-1" autocomplete="off">
+                </div>
+                <button type="submit" class="btn-enviar-mensaje">Enviar mensaje</button>
+            </form>
+            <p id="estado-mensaje-contacto" class="estado-mensaje-contacto" aria-live="polite"></p>
+            <p class="nota-privacidad-contacto">Usaremos tus datos únicamente para atender este mensaje. No se mostrarán públicamente.</p>
+        </div>
     </section>
 
     <main id="inicio" class="contenido-principal active">
@@ -308,6 +341,49 @@
                     await actualizarTotalSuscriptores();
                 } catch (error) {
                     estado.textContent = error.message || 'No se pudo completar la suscripción.';
+                } finally {
+                    boton.disabled = false;
+                }
+            });
+        }
+
+        function iniciarFormularioContacto() {
+            var form = document.getElementById('form-mensaje-contacto');
+            if (!form) return;
+
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                var boton = form.querySelector('button[type="submit"]');
+                var estado = document.getElementById('estado-mensaje-contacto');
+                var datos = {
+                    nombre_completo: document.getElementById('contacto-nombre-completo').value.trim(),
+                    apellido: document.getElementById('contacto-apellido').value.trim(),
+                    email: document.getElementById('contacto-email-visitante').value.trim(),
+                    telefono: document.getElementById('contacto-telefono').value.trim(),
+                    mensaje: document.getElementById('contacto-mensaje-visitante').value.trim(),
+                    sitio_web: document.getElementById('contacto-sitio-web').value.trim()
+                };
+
+                boton.disabled = true;
+                estado.textContent = 'Enviando mensaje...';
+                estado.className = 'estado-mensaje-contacto';
+
+                try {
+                    var response = await fetch('/api/mensajes-contacto', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(datos)
+                    });
+                    var result = await response.json();
+                    if (!response.ok || !result.success) {
+                        throw new Error(result.error || 'No se pudo enviar el mensaje. Inténtalo de nuevo.');
+                    }
+                    form.reset();
+                    estado.textContent = '¡Mensaje enviado! Usaremos tus datos únicamente para responderte.';
+                    estado.classList.add('estado-mensaje-contacto-exito');
+                } catch (error) {
+                    estado.textContent = error.message || 'No se pudo enviar el mensaje. Inténtalo de nuevo.';
+                    estado.classList.add('estado-mensaje-contacto-error');
                 } finally {
                     boton.disabled = false;
                 }
@@ -583,6 +659,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             actualizarContenidoPublico();
             renderizarContacto();
+            iniciarFormularioContacto();
             iniciarSuscripciones();
             iniciarRealtime();
             window.setInterval(function() {
