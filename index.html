@@ -95,39 +95,6 @@
         <div id="contacto-canales" class="contacto-canales" aria-live="polite">
             <p class="mensaje-vacio">Cargando canales de contacto...</p>
         </div>
-        <div class="formulario-contacto">
-            <h3>Envíanos un mensaje</h3>
-            <p class="formulario-contacto-intro">Completa tus datos y nos pondremos en contacto contigo. Tu información no se publicará.</p>
-            <form id="form-mensaje-contacto" class="form-mensaje-contacto">
-                <div class="campo-mensaje-contacto">
-                    <label for="contacto-nombre-completo">Nombre completo</label>
-                    <input id="contacto-nombre-completo" name="nombre_completo" type="text" autocomplete="name" maxlength="120" required>
-                </div>
-                <div class="campo-mensaje-contacto">
-                    <label for="contacto-apellido">Apellido</label>
-                    <input id="contacto-apellido" name="apellido" type="text" autocomplete="family-name" maxlength="100" required>
-                </div>
-                <div class="campo-mensaje-contacto">
-                    <label for="contacto-email-visitante">Correo electrónico</label>
-                    <input id="contacto-email-visitante" name="email" type="email" autocomplete="email" maxlength="254" required>
-                </div>
-                <div class="campo-mensaje-contacto">
-                    <label for="contacto-telefono">Número de teléfono</label>
-                    <input id="contacto-telefono" name="telefono" type="tel" autocomplete="tel" maxlength="32" required>
-                </div>
-                <div class="campo-mensaje-contacto campo-mensaje-contacto-ancho">
-                    <label for="contacto-mensaje-visitante">Mensaje</label>
-                    <textarea id="contacto-mensaje-visitante" name="mensaje" maxlength="3000" required></textarea>
-                </div>
-                <div class="campo-trampa-contacto" aria-hidden="true">
-                    <label for="contacto-sitio-web">Deja este campo vacío</label>
-                    <input id="contacto-sitio-web" name="sitio_web" type="text" tabindex="-1" autocomplete="off">
-                </div>
-                <button type="submit" class="btn-enviar-mensaje">Enviar mensaje</button>
-            </form>
-            <p id="estado-mensaje-contacto" class="estado-mensaje-contacto" aria-live="polite"></p>
-            <p class="nota-privacidad-contacto">Usaremos tus datos únicamente para atender este mensaje. No se mostrarán públicamente.</p>
-        </div>
     </section>
 
     <main id="inicio" class="contenido-principal active">
@@ -153,6 +120,39 @@
                 <p class="nota-privacidad-suscripcion">Tu correo se guarda de forma privada.</p>
                 <p id="estado-suscripcion" class="estado-suscripcion" aria-live="polite"></p>
             </section>
+            <div class="formulario-contacto">
+                <h3>Deja un mensaje y tus datos</h3>
+                <p class="formulario-contacto-intro">Completa tus datos y nos pondremos en contacto contigo. Tu información no se publicará.</p>
+                <form id="form-mensaje-contacto" class="form-mensaje-contacto">
+                    <div class="campo-mensaje-contacto">
+                        <label for="contacto-nombre-completo">Nombre completo</label>
+                        <input id="contacto-nombre-completo" name="nombre_completo" type="text" autocomplete="name" maxlength="120" required>
+                    </div>
+                    <div class="campo-mensaje-contacto">
+                        <label for="contacto-apellido">Apellido</label>
+                        <input id="contacto-apellido" name="apellido" type="text" autocomplete="family-name" maxlength="100" required>
+                    </div>
+                    <div class="campo-mensaje-contacto">
+                        <label for="contacto-email-visitante">Correo electrónico</label>
+                        <input id="contacto-email-visitante" name="email" type="email" autocomplete="email" maxlength="254" required>
+                    </div>
+                    <div class="campo-mensaje-contacto">
+                        <label for="contacto-telefono">Número de teléfono</label>
+                        <input id="contacto-telefono" name="telefono" type="tel" autocomplete="tel" maxlength="32" required>
+                    </div>
+                    <div class="campo-mensaje-contacto campo-mensaje-contacto-ancho">
+                        <label for="contacto-mensaje-visitante">Mensaje</label>
+                        <textarea id="contacto-mensaje-visitante" name="mensaje" maxlength="3000" required></textarea>
+                    </div>
+                    <div class="campo-trampa-contacto" aria-hidden="true">
+                        <label for="contacto-sitio-web">Deja este campo vacío</label>
+                        <input id="contacto-sitio-web" name="sitio_web" type="text" tabindex="-1" autocomplete="off">
+                    </div>
+                    <button type="submit" class="btn-enviar-mensaje">Enviar mensaje</button>
+                </form>
+                <p id="estado-mensaje-contacto" class="estado-mensaje-contacto" aria-live="polite"></p>
+                <p class="nota-privacidad-contacto">Usaremos tus datos únicamente para atender este mensaje. No se mostrarán públicamente.</p>
+            </div>
         </section>
     </main>
 
