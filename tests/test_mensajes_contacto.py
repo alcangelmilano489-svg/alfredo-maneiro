@@ -91,6 +91,64 @@ class MensajesContactoApiTests(unittest.TestCase):
         response = self.client.get("/api/mensajes-contacto")
         self.assertEqual(response.status_code, 405)
 
+    def test_admin_message_listing_requires_correct_password(self):
+        with patch.object(servidor, "solicitar_supabase_admin") as query:
+            response = self.client.get(
+                "/api/admin/mensajes-contacto",
+                headers={"X-Admin-Password": "incorrecta"},
+            )
+
+        self.assertEqual(response.status_code, 401)
+        query.assert_not_called()
+
+    def test_admin_message_listing_returns_private_page_without_cache(self):
+        filas = [
+            {
+                "nombre_completo": "María Elena",
+                "apellido": "Pérez",
+                "email": "maria@example.org",
+                "telefono": "+58 412 555 0101",
+                "mensaje": "Primer mensaje.",
+                "created_at": "2026-10-25T12:00:00+00:00",
+            },
+            {
+                "nombre_completo": "Luis",
+                "apellido": "Gómez",
+                "email": "luis@example.org",
+                "telefono": "+58 414 555 0202",
+                "mensaje": "Segundo mensaje.",
+                "created_at": "2026-10-24T12:00:00+00:00",
+            },
+        ]
+        with patch.object(servidor, "solicitar_supabase_admin", return_value=filas) as query:
+            response = self.client.get(
+                "/api/admin/mensajes-contacto?limit=1&offset=0",
+                headers={"X-Admin-Password": "test-admin-password"},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["mensajes"], filas[:1])
+        self.assertTrue(data["has_more"])
+        self.assertEqual(data["next_offset"], 1)
+        self.assertIn("no-store", response.headers.get("Cache-Control", ""))
+        args = query.call_args
+        self.assertEqual(args.args[:2], ("GET", "mensajes_contacto"))
+        self.assertEqual(args.kwargs["params"]["select"], "nombre_completo,apellido,email,telefono,mensaje,created_at")
+        self.assertEqual(args.kwargs["params"]["order"], "created_at.desc")
+        self.assertEqual(args.kwargs["params"]["limit"], "2")
+        self.assertEqual(args.kwargs["params"]["offset"], "0")
+
+    def test_admin_message_listing_rejects_invalid_pagination(self):
+        with patch.object(servidor, "solicitar_supabase_admin") as query:
+            response = self.client.get(
+                "/api/admin/mensajes-contacto?limit=0",
+                headers={"X-Admin-Password": "test-admin-password"},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        query.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

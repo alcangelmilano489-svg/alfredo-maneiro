@@ -1405,6 +1405,62 @@ def crear_mensaje_contacto() -> Any:
         return respuesta_error("No se pudo enviar el mensaje. Inténtalo de nuevo.", 500)
 
 
+@app.route("/api/admin/mensajes-contacto", methods=["GET"])
+@requiere_admin
+def listar_mensajes_contacto_admin() -> Any:
+
+    if supabase_admin is None:
+        return respuesta_error("El servicio de mensajes no está configurado.", 503)
+
+    try:
+        limite = int(request.args.get("limit", "50"))
+        offset = int(request.args.get("offset", "0"))
+    except (TypeError, ValueError):
+        return respuesta_error("La paginación solicitada no es válida.", 400)
+
+    if not 1 <= limite <= 100 or offset < 0:
+        return respuesta_error("La paginación solicitada no es válida.", 400)
+
+    columnas = "nombre_completo,apellido,email,telefono,mensaje,created_at"
+
+    try:
+        if SUPABASE_WRITE_KEY.startswith("sb_secret_"):
+            filas = solicitar_supabase_admin(
+                "GET",
+                "mensajes_contacto",
+                params={
+                    "select": columnas,
+                    "order": "created_at.desc",
+                    "limit": str(limite + 1),
+                    "offset": str(offset)
+                }
+            )
+        else:
+            respuesta_query = (
+                supabase_admin
+                .table("mensajes_contacto")
+                .select(columnas)
+                .order("created_at", desc=True)
+                .range(offset, offset + limite)
+                .execute()
+            )
+            filas = cast(List[Any], respuesta_query.data or [])
+
+        mensajes = filas[:limite]
+        respuesta = jsonify({
+            "success": True,
+            "mensajes": mensajes,
+            "has_more": len(filas) > limite,
+            "next_offset": offset + len(mensajes)
+        })
+        respuesta.headers["Cache-Control"] = "private, no-store, max-age=0"
+        return respuesta
+
+    except Exception:
+        app.logger.exception("No se pudieron cargar los mensajes de contacto.")
+        return respuesta_error("No se pudieron cargar los mensajes.", 500)
+
+
 # ============================================================
 # SECCIONES EDITORIALES (VIDA / OBRA / INICIO) - TEXTO Y DOCUMENTOS
 # ============================================================

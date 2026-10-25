@@ -25,6 +25,11 @@
         .admin-acciones-eliminar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
         .admin-acciones-eliminar span { color: #64748b; font-size: 13px; }
         .btn-eliminar:disabled { opacity: 0.5; cursor: not-allowed; }
+        .mensaje-contacto-admin { background: #f8fafc; border: 1px solid #dbe4f0; border-radius: 8px; padding: 16px; margin-top: 12px; overflow-wrap: anywhere; }
+        .encabezado-mensaje-admin { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+        .mensaje-contacto-admin h3 { margin: 0; color: #1e3a8a; font-size: 17px; }
+        .mensaje-contacto-admin p { margin: 8px 0; }
+        .contenido-mensaje-admin { white-space: pre-wrap; }
         @media (max-width: 480px) {
             .admin-container { margin: 16px auto; padding: 0 10px; }
             .admin-card { padding: 18px 14px; }
@@ -56,6 +61,15 @@
         </div>
 
         <div class="admin-container">
+
+            <div class="admin-card" id="bandeja-mensajes-visitantes">
+                <h2>Mensajes de visitantes</h2>
+                <p style="color:#64748b; font-size:14px;">Bandeja privada: solo se carga después de ingresar al panel de administración.</p>
+                <button class="btn-actualizar" id="btn-actualizar-mensajes-admin" type="button" onclick="cargarMensajesContactoAdmin(true)">Actualizar mensajes</button>
+                <p id="estado-mensajes-admin" aria-live="polite" style="color:#475569; font-size:14px;">Inicia sesión para cargar los mensajes.</p>
+                <div id="lista-mensajes-admin" aria-live="polite"></div>
+                <button class="btn-actualizar" id="btn-mas-mensajes-admin" type="button" onclick="cargarMensajesContactoAdmin(false)" hidden>Cargar mensajes anteriores</button>
+            </div>
 
             <!-- 1. SECCIÓN INICIO -->
             <div class="admin-card">
@@ -150,6 +164,8 @@
 
     <script>
         let adminPassword = '';
+        let offsetMensajesContactoAdmin = 0;
+        const limiteMensajesContactoAdmin = 50;
 
         function escaparHtmlAdmin(valor) {
             return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(caracter) {
@@ -164,6 +180,78 @@
                 throw new Error('El servidor respondió HTTP ' + response.status + ' con contenido no JSON.' + (detalle ? ' ' + detalle : ''));
             }
             return response.json();
+        }
+
+        function fechaMensajeContactoAdmin(valor) {
+            const fecha = new Date(valor);
+            if (Number.isNaN(fecha.getTime())) return 'Fecha no disponible';
+            return new Intl.DateTimeFormat('es-VE', {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+                timeZone: 'America/Caracas'
+            }).format(fecha);
+        }
+
+        function htmlMensajeContactoAdmin(mensaje) {
+            const nombre = [mensaje.nombre_completo, mensaje.apellido]
+                .filter(Boolean)
+                .join(' ');
+            const fecha = mensaje.created_at || '';
+            return '<article class="mensaje-contacto-admin">' +
+                '<div class="encabezado-mensaje-admin"><h3>' + escaparHtmlAdmin(nombre || 'Nombre no disponible') + '</h3>' +
+                '<time datetime="' + escaparHtmlAdmin(fecha) + '">' + escaparHtmlAdmin(fechaMensajeContactoAdmin(fecha)) + '</time></div>' +
+                '<p><strong>Correo electrónico:</strong> ' + escaparHtmlAdmin(mensaje.email) + '</p>' +
+                '<p><strong>Teléfono:</strong> ' + escaparHtmlAdmin(mensaje.telefono) + '</p>' +
+                '<div><strong>Mensaje:</strong><p class="contenido-mensaje-admin">' + escaparHtmlAdmin(mensaje.mensaje) + '</p></div>' +
+                '</article>';
+        }
+
+        async function cargarMensajesContactoAdmin(recargar = true) {
+            const lista = document.getElementById('lista-mensajes-admin');
+            const estado = document.getElementById('estado-mensajes-admin');
+            const botonActualizar = document.getElementById('btn-actualizar-mensajes-admin');
+            const botonMas = document.getElementById('btn-mas-mensajes-admin');
+            const boton = recargar ? botonActualizar : botonMas;
+
+            if (recargar) {
+                offsetMensajesContactoAdmin = 0;
+                lista.innerHTML = '';
+                botonMas.hidden = true;
+            }
+
+            boton.disabled = true;
+            estado.textContent = 'Cargando mensajes...';
+            try {
+                const url = '/api/admin/mensajes-contacto?limit=' + limiteMensajesContactoAdmin +
+                    '&offset=' + offsetMensajesContactoAdmin;
+                const response = await fetch(url, {
+                    headers: { 'X-Admin-Password': adminPassword },
+                    cache: 'no-store'
+                });
+                const result = await leerJsonRespuesta(response);
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || 'No se pudieron cargar los mensajes.');
+                }
+
+                const mensajes = Array.isArray(result.mensajes) ? result.mensajes : [];
+                if (mensajes.length) {
+                    lista.insertAdjacentHTML('beforeend', mensajes.map(htmlMensajeContactoAdmin).join(''));
+                } else if (recargar) {
+                    lista.innerHTML = '<p style="color:#64748b;">Aún no has recibido mensajes.</p>';
+                }
+
+                offsetMensajesContactoAdmin = Number.isInteger(result.next_offset)
+                    ? result.next_offset
+                    : offsetMensajesContactoAdmin + mensajes.length;
+                botonMas.hidden = !result.has_more;
+                estado.textContent = offsetMensajesContactoAdmin
+                    ? offsetMensajesContactoAdmin + ' mensaje(s) cargado(s).'
+                    : 'Aún no has recibido mensajes.';
+            } catch (error) {
+                estado.textContent = error.message || 'No se pudieron cargar los mensajes.';
+            } finally {
+                boton.disabled = false;
+            }
         }
 
         async function verificarClave() {
@@ -193,7 +281,8 @@
                     actualizarListaMultimedia('fotos'),
                     actualizarListaMultimedia('videos'),
                     actualizarEstadoSeccionesEditoriales(),
-                    cargarContactoAdmin()
+                    cargarContactoAdmin(),
+                    cargarMensajesContactoAdmin(true)
                 ]);
             } catch (error) {
                 mensajeError.textContent = 'No se pudo conectar con el servidor.';
