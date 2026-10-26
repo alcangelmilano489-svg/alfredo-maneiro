@@ -73,7 +73,8 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 # Secciones fijas editoriales de la página
 SECCIONES_EDITORIALES: Set[str] = {
     "vida",
-    "obra"
+    "obra",
+    "quienes-somos"
 }
 
 SECCIONES_PUBLICACIONES: Set[str] = {

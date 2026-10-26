@@ -119,6 +119,21 @@
                 </div>
             </div>
 
+            <div class="admin-card">
+                <h2>Quiénes somos</h2>
+                <label for="admin-titulo-quienes-somos">Título / subtítulo:</label>
+                <input type="text" id="admin-titulo-quienes-somos" placeholder="Título de la sección...">
+                <label for="admin-texto-quienes-somos">Información para visitantes:</label>
+                <textarea id="admin-texto-quienes-somos" placeholder="Escribe aquí la información sobre quiénes somos..."></textarea>
+                <label for="admin-archivo-quienes-somos">Adjuntar imagen o documento opcional:</label>
+                <input type="file" id="admin-archivo-quienes-somos" accept="image/*,.pdf,.doc,.docx">
+                <button class="btn-actualizar" onclick="publicarSeccionEspecifica('quienes-somos', event)">Publicar en Quiénes somos</button>
+                <div class="admin-acciones-eliminar">
+                    <button class="btn-eliminar" id="btn-eliminar-seccion-quienes-somos" type="button" onclick="eliminarSeccionEditorial('quienes-somos')" disabled>Eliminar contenido guardado de Quiénes somos</button>
+                    <span id="estado-seccion-quienes-somos" aria-live="polite">Comprobando contenido guardado...</span>
+                </div>
+            </div>
+
             <!-- 4. SECCIÓN FOTOS -->
             <div class="admin-card">
                 <h2>📷 Sección Fotos (Galería)</h2>
@@ -527,7 +542,7 @@
 
                 const contenidos = result.secciones || {};
                 const archivos = result.archivos || {};
-                ['vida', 'obra'].forEach(function(seccion) {
+                ['vida', 'obra', 'quienes-somos'].forEach(function(seccion) {
                     const button = document.getElementById('btn-eliminar-seccion-' + seccion);
                     const estado = document.getElementById('estado-seccion-' + seccion);
                     const hayContenido = Boolean(String(contenidos[seccion] || '').trim() || archivos[seccion]);
@@ -538,7 +553,7 @@
                         : 'No hay contenido publicado. Puedes usar Eliminar para limpiar el borrador.';
                 });
             } catch (error) {
-                ['vida', 'obra'].forEach(function(seccion) {
+                ['vida', 'obra', 'quienes-somos'].forEach(function(seccion) {
                     const button = document.getElementById('btn-eliminar-seccion-' + seccion);
                     const estado = document.getElementById('estado-seccion-' + seccion);
                     if (button) button.disabled = true;
@@ -548,8 +563,9 @@
         }
 
         async function eliminarSeccionEditorial(seccion) {
-            const nombre = seccion === 'vida' ? 'Vida' : 'Obra';
-            if (!['vida', 'obra'].includes(seccion)) return;
+            const nombres = { vida: 'Vida', obra: 'Obra', 'quienes-somos': 'Quiénes somos' };
+            const nombre = nombres[seccion];
+            if (!nombre) return;
             if (!confirm('¿Eliminar todo el contenido guardado y limpiar el borrador de la sección ' + nombre + '? Esta acción no se puede deshacer.')) return;
 
             const button = document.getElementById('btn-eliminar-seccion-' + seccion);

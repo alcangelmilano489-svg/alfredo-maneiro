@@ -42,7 +42,7 @@ create index if not exists publicaciones_seccion_fecha_idx
     on public.publicaciones (seccion, fecha desc);
 
 create table if not exists public.contenido_secciones (
-    seccion text primary key check (seccion in ('vida', 'obra')),
+    seccion text primary key check (seccion in ('vida', 'obra', 'quienes-somos')),
     contenido text not null default '',
     archivo_url text,
     updated_at timestamptz not null default now()

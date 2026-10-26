@@ -38,6 +38,7 @@
 
     <nav class="menu-navegacion" aria-label="Navegación principal">
         <a href="#inicio" class="tab-activo" onclick="activarTab(this); navegarSeccion(''); return false;">Inicio</a>
+        <a href="#quienes-somos" onclick="activarTab(this); navegarSeccion('quienes-somos'); return false;">Quiénes somos</a>
         <a href="#vida" onclick="activarTab(this); navegarSeccion('vida'); return false;">Vida</a>
         <a href="#obra" onclick="activarTab(this); navegarSeccion('obra'); return false;">Obra</a>
         <a href="#fotos" onclick="activarTab(this); navegarSeccion('fotos'); return false;">Fotos</a>
@@ -63,6 +64,13 @@
             <div class="foto-caja"><img src="/assets/maneiro8.jpeg" alt="Archivo fotográfico"></div>
         </div>
     </div>
+
+    <section id="quienes-somos" class="seccion-fija">
+        <div class="seccion-header"><h2>Quiénes somos</h2></div>
+        <div id="contenido-quienes-somos" class="contenido-seccion" style="white-space:pre-wrap;">
+            <p>Aún no hay contenido publicado.</p>
+        </div>
+    </section>
 
     <section id="vida" class="seccion-fija">
         <div class="seccion-header"><h2>Vida de Alfredo Maneiro</h2></div>
@@ -573,7 +581,7 @@
 
                 var contenido = resultado.secciones || {};
                 var archivos = resultado.archivos || {};
-                ['vida', 'obra'].forEach(function(seccion) {
+                ['vida', 'obra', 'quienes-somos'].forEach(function(seccion) {
                     var destino = document.getElementById('contenido-' + seccion);
                     var texto = contenido[seccion];
                     if (destino && typeof texto === 'string') {

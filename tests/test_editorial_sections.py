@@ -259,13 +259,13 @@ class EditorialSectionsApiTests(unittest.TestCase):
         servidor.ADMIN_PASSWORD = "test-admin-password"
         self.client = servidor.app.test_client()
 
-    def test_public_read_returns_both_sections(self):
+    def test_public_read_returns_all_editorial_sections(self):
         response = self.client.get("/api/secciones")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), {
             "success": True,
-            "secciones": {"vida": "", "obra": ""},
-            "archivos": {"vida": None, "obra": None},
+            "secciones": {"vida": "", "obra": "", "quienes-somos": ""},
+            "archivos": {"vida": None, "obra": None, "quienes-somos": None},
         })
 
     def test_public_read_returns_saved_text(self):
@@ -278,6 +278,29 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json()["secciones"]["vida"], "Biografía actualizada")
         self.assertEqual(response.get_json()["secciones"]["obra"], "")
+
+    def test_admin_can_publish_quienes_somos_and_visitors_can_read_it(self):
+        response = self.client.put(
+            "/api/secciones/quienes-somos",
+            json={"contenido": "Somos un equipo dedicado a difundir el legado."},
+            headers={"X-Admin-Password": "test-admin-password"},
+        )
+        self.assertEqual(response.status_code, 200, response.get_json())
+        public_response = self.client.get("/api/secciones")
+        self.assertEqual(public_response.status_code, 200)
+        self.assertEqual(
+            public_response.get_json()["secciones"]["quienes-somos"],
+            "Somos un equipo dedicado a difundir el legado.",
+        )
+
+    def test_quienes_somos_is_available_in_visitor_navigation_and_admin_panel(self):
+        public_html = (ROOT / "index.html").read_text(encoding="utf-8")
+        admin_html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        self.assertIn('href="#quienes-somos"', public_html)
+        self.assertIn('id="contenido-quienes-somos"', public_html)
+        self.assertIn("'quienes-somos'", public_html)
+        self.assertIn('id="admin-texto-quienes-somos"', admin_html)
+        self.assertIn("publicarSeccionEspecifica('quienes-somos', event)", admin_html)
 
     def test_admin_can_save_multipart_content_for_vida(self):
         response = self.client.put(
