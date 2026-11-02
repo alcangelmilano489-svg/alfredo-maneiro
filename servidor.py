@@ -68,7 +68,8 @@ SUPABASE_STORAGE_BUCKET = (
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
-app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
+# Include a small allowance for multipart form fields around the uploaded file.
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES + 1024 * 1024
 
 # Secciones fijas editoriales de la página
 SECCIONES_EDITORIALES: Set[str] = {
