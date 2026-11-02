@@ -1077,3 +1077,111 @@ body {
 .admin-card button[style*="background: #ef4444"]:hover {
     background: #dc2626 !important;
 }
+
+
+/* Biblioteca de libros y documentos PDF */
+.obra-intro {
+    margin-bottom: 22px;
+    color: #475569;
+}
+
+.lista-obras-pdf {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.obra-pdf-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #dbe3ee;
+    border-left: 4px solid #1e3a8a;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
+}
+
+.obra-pdf-cabecera {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+
+.obra-pdf-etiqueta {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    color: #7f1d1d;
+    background: #fee2e2;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+}
+
+.obra-pdf-card h3 {
+    color: #0b1f4d;
+    font-size: 17px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.obra-pdf-descripcion {
+    flex: 1;
+    margin: 12px 0 18px;
+    color: #475569;
+    font-size: 14px;
+    line-height: 1.65;
+    white-space: pre-line;
+}
+
+.obra-pdf-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.obra-pdf-acciones a {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 14px;
+    border: 1px solid #1e3a8a;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+}
+
+.obra-pdf-leer {
+    color: #1e3a8a;
+    background: #fff;
+}
+
+.obra-pdf-descargar {
+    color: #fff;
+    background: #1e3a8a;
+}
+
+.obra-pdf-acciones a:hover {
+    filter: brightness(0.92);
+}
+
+@media (max-width: 560px) {
+    .lista-obras-pdf {
+        grid-template-columns: 1fr;
+    }
+
+    .obra-pdf-card {
+        padding: 16px;
+    }
+
+    .obra-pdf-acciones {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+}

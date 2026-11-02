@@ -55,8 +55,11 @@
 
     <section id="obra" class="seccion-fija">
         <div class="seccion-header"><h2>Obra</h2></div>
-        <div id="contenido-obra" class="contenido-seccion" style="white-space:pre-wrap;">
-            <p>Espacio dedicado al análisis y difusión de los aportes teóricos y políticos de Alfredo Maneiro.</p>
+        <div id="contenido-obra" class="contenido-seccion">
+            <p class="obra-intro">Libros y documentos sobre el pensamiento y legado de Alfredo Maneiro. Selecciona una obra para leerla en línea o descargarla en PDF.</p>
+        </div>
+        <div id="lista-obras-pdf" class="lista-obras-pdf" aria-live="polite">
+            <p class="mensaje-vacio">Cargando libros PDF...</p>
         </div>
     </section>
 
@@ -444,6 +447,42 @@
 
         var realtimeActivo = false;
 
+        async function renderizarObrasPdf() {
+            var contenedor = document.getElementById('lista-obras-pdf');
+            if (!contenedor) return;
+            try {
+                var respuesta = await fetch('/api/publicaciones?seccion=obra', { cache: 'no-store' });
+                var resultado = await respuesta.json();
+                if (!respuesta.ok || !resultado.success) throw new Error(resultado.error || 'No se pudieron cargar las obras.');
+                var obras = (resultado.publicaciones || []).filter(function(obra) {
+                    return obra.mediaType === 'pdf' && Boolean(urlMultimedia(obra.mediaUrl));
+                });
+                if (!obras.length) {
+                    contenedor.innerHTML = '<p class="mensaje-vacio">Próximamente se publicarán libros y documentos en PDF.</p>';
+                    return;
+                }
+                contenedor.innerHTML = obras.map(function(obra) {
+                    var urlPdf = urlMultimedia(obra.mediaUrl);
+                    var titulo = escaparHtml(obra.titulo || 'Obra sin título');
+                    var descripcion = escaparHtml(obra.texto || 'Libro o documento de Alfredo Maneiro.');
+                    var nombreArchivo = (obra.titulo || 'obra').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80) + '.pdf';
+                    var urlDescarga = new URL(urlPdf);
+                    urlDescarga.searchParams.set('download', nombreArchivo);
+                    return '<article class="obra-pdf-card">' +
+                        '<div class="obra-pdf-cabecera"><span class="obra-pdf-etiqueta">PDF</span><h3>' + titulo + '</h3></div>' +
+                        '<p class="obra-pdf-descripcion">' + descripcion + '</p>' +
+                        '<div class="obra-pdf-acciones">' +
+                            '<a class="obra-pdf-leer" href="' + escaparHtml(urlPdf) + '" target="_blank" rel="noopener noreferrer">Leer en línea</a>' +
+                            '<a class="obra-pdf-descargar" href="' + escaparHtml(urlDescarga.href) + '">Descargar PDF</a>' +
+                        '</div>' +
+                    '</article>';
+                }).join('');
+            } catch (error) {
+                console.error('No se pudieron cargar las obras PDF:', error);
+                contenedor.innerHTML = '<p class="mensaje-vacio">No se pudieron cargar los libros. Inténtalo de nuevo más tarde.</p>';
+            }
+        }
+
         async function renderizarSeccionesEditoriales() {
             try {
                 var response = await fetch('/api/secciones', { cache: 'no-store' });
@@ -452,7 +491,7 @@
                 if (!resultado.success) throw new Error(resultado.error || 'Error al cargar las secciones.');
 
                 var contenido = resultado.secciones || {};
-                ['vida', 'obra'].forEach(function(seccion) {
+                ['vida'].forEach(function(seccion) {
                     var destino = document.getElementById('contenido-' + seccion);
                     var texto = contenido[seccion];
                     if (destino && typeof texto === 'string') {
@@ -466,6 +505,7 @@
 
         function actualizarContenidoPublico() {
             renderizarSeccionesEditoriales();
+            renderizarObrasPdf();
             renderizarNoticias();
             renderizarGaleria('fotos', 'galeria-fotos', 'image');
             renderizarGaleria('videos', 'galeria-videos', 'video');

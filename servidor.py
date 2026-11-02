@@ -64,6 +64,7 @@ ALLOWED_MEDIA = {
     ".gif": ("image/gif", "image"),
     ".jpeg": ("image/jpeg", "image"),
     ".jpg": ("image/jpeg", "image"),
+    ".pdf": ("application/pdf", "pdf"),
     ".png": ("image/png", "image"),
     ".webp": ("image/webp", "image"),
     ".m4v": ("video/x-m4v", "video"),
@@ -295,7 +296,7 @@ def obtener_publicaciones():
         )
 
     seccion = request.args.get("seccion")
-    if seccion and seccion not in {"inicio", "fotos", "videos"}:
+    if seccion and seccion not in {"inicio", "fotos", "videos", "obra"}:
         return respuesta_error("Sección no válida.", 400)
 
     try:
@@ -449,8 +450,16 @@ def crear_publicacion():
     seccion = request.form.get("seccion", "inicio")
     archivo = request.files.get("file")
 
-    if seccion not in {"inicio", "fotos", "videos"}:
+    if seccion not in {"inicio", "fotos", "videos", "obra"}:
         return respuesta_error("Sección no válida.", 400)
+    if seccion == "obra" and (archivo is None or not archivo.filename):
+        return respuesta_error("Selecciona un libro o documento PDF para Obras.", 400)
+    if seccion == "obra" and not titulo:
+        return respuesta_error("Escribe el título de la obra.", 400)
+    if seccion == "obra" and len(titulo) > 180:
+        return respuesta_error("El título no puede superar los 180 caracteres.", 400)
+    if seccion == "obra" and len(texto) > 1000:
+        return respuesta_error("La descripción no puede superar los 1000 caracteres.", 400)
     if not titulo and not texto and (archivo is None or not archivo.filename):
         return respuesta_error("Agrega texto, un título o un archivo.", 400)
 
@@ -471,12 +480,18 @@ def crear_publicacion():
                 return respuesta_error("La sección Videos solo acepta videos.", 400)
             if seccion == "fotos" and media_type != "image":
                 return respuesta_error("La sección Fotos solo acepta imágenes.", 400)
+            if seccion == "obra" and media_type != "pdf":
+                return respuesta_error("La sección Obras solo acepta archivos PDF.", 400)
+            if media_type == "pdf" and seccion != "obra":
+                return respuesta_error("Los archivos PDF deben publicarse desde la sección Obras.", 400)
 
             contenido = archivo.stream.read(MAX_UPLOAD_BYTES + 1)
             if not contenido:
                 return respuesta_error("El archivo está vacío.", 400)
             if len(contenido) > MAX_UPLOAD_BYTES:
                 return respuesta_error("El archivo supera el límite de 100 MB.", 413)
+            if media_type == "pdf" and b"%PDF-" not in contenido[:1024]:
+                return respuesta_error("El archivo seleccionado no parece ser un PDF válido.", 400)
 
             media_path = f"publicaciones/{uuid.uuid4().hex}_{nombre}"
             almacenamiento = cliente_admin.storage.from_(SUPABASE_STORAGE_BUCKET)
