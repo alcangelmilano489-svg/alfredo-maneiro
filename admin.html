@@ -103,32 +103,16 @@
                 </div>
             </div>
 
-            <!-- 3. SECCIÓN OBRA -->
+            <!-- 3. OBRAS: ÚNICAMENTE LIBROS EN PDF -->
             <div class="admin-card">
-                <h2>📖 Presentación breve de la Obra</h2>
-                <p style="color:#64748b;font-size:14px;margin:0 0 14px;">Para libros completos, usa la Biblioteca de Obras (PDF) que aparece debajo. Aquí puedes escribir solo una presentación breve.</p>
-                <label for="admin-titulo-obra">Título de la obra:</label>
-                <input type="text" id="admin-titulo-obra" placeholder="Título de la obra...">
-                <label for="admin-texto-obra">Descripción breve (máximo 1000 caracteres):</label>
-                <textarea id="admin-texto-obra" maxlength="1000" placeholder="Escribe una presentación breve; no pegues aquí el libro completo..."></textarea>
-                <label for="admin-archivo-obra">Adjuntar imagen ilustrativa opcional:</label>
-                <input type="file" id="admin-archivo-obra" accept="image/*">
-                <button class="btn-actualizar" onclick="publicarSeccionEspecifica('obra', event)">Guardar presentación breve</button>
-                <div class="admin-acciones-eliminar">
-                    <button class="btn-eliminar" id="btn-eliminar-seccion-obra" type="button" onclick="eliminarSeccionEditorial('obra')" disabled>Eliminar contenido guardado de Obra</button>
-                    <span id="estado-seccion-obra" aria-live="polite">Comprobando contenido guardado...</span>
-                </div>
-            </div>
-
-            <div class="admin-card">
-                <h2>📚 Biblioteca de Obras (PDF)</h2>
-                <p style="color:#64748b;font-size:14px;margin:0 0 14px;">Publica cada libro como PDF independiente para que los visitantes puedan leerlo o descargarlo. Tamaño máximo: 100 MB.</p>
+                <h2>📚 Obras — libros en PDF</h2>
+                <p style="color:#64748b;font-size:14px;margin:0 0 14px;">Esta sección acepta exclusivamente archivos PDF. Cada libro se publicará para lectura en línea y descarga. Tamaño máximo: 100 MB.</p>
                 <label for="admin-obra-pdf-titulo">Título del libro:</label>
-                <input type="text" id="admin-obra-pdf-titulo" maxlength="180" placeholder="Título del libro o documento">
+                <input type="text" id="admin-obra-pdf-titulo" maxlength="180" placeholder="Título del libro o documento" required>
                 <label for="admin-obra-pdf-descripcion">Descripción breve (opcional):</label>
                 <textarea id="admin-obra-pdf-descripcion" maxlength="1000" placeholder="Autor, edición o breve presentación"></textarea>
-                <label for="admin-obra-pdf-archivo">Archivo PDF:</label>
-                <input type="file" id="admin-obra-pdf-archivo" accept="application/pdf,.pdf">
+                <label for="admin-obra-pdf-archivo">Libro en PDF (único formato permitido):</label>
+                <input type="file" id="admin-obra-pdf-archivo" accept=".pdf,application/pdf" required>
                 <button class="btn-actualizar" type="button" onclick="publicarObraPdf(event)">Subir y publicar PDF</button>
                 <p id="estado-obra-pdf" aria-live="polite" style="font-size:13px;margin:10px 0 0;"></p>
                 <h3 style="margin:20px 0 8px;color:#334155;">Libros publicados</h3>
