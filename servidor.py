@@ -80,7 +80,8 @@ SECCIONES_EDITORIALES: Set[str] = {
 SECCIONES_PUBLICACIONES: Set[str] = {
     "inicio",
     "fotos",
-    "videos"
+    "videos",
+    "obra"
 }
 
 
@@ -829,6 +830,14 @@ def crear_publicacion() -> Any:
 
     if len(titulo) > 300 or len(texto) > 100000:
         return respuesta_error("El título o el texto supera el límite permitido.", 400)
+    if seccion == "obra" and not titulo:
+        return respuesta_error("Escribe el título de la obra.", 400)
+    if seccion == "obra" and len(titulo) > 180:
+        return respuesta_error("El título no puede superar los 180 caracteres.", 400)
+    if seccion == "obra" and len(texto) > 1000:
+        return respuesta_error("La descripción no puede superar los 1000 caracteres.", 400)
+    if seccion == "obra" and not (archivo and archivo.filename):
+        return respuesta_error("Selecciona un libro o documento PDF para Obras.", 400)
     if not titulo and not texto and not (archivo and archivo.filename):
         return respuesta_error("Indica un título, texto o archivo.", 400)
     if seccion in {"fotos", "videos"} and not (archivo and archivo.filename):
@@ -846,7 +855,11 @@ def crear_publicacion() -> Any:
             return respuesta_error("Formato de archivo no permitido.", 400)
 
         content_type, tipo = metadata
-        if tipo not in {"image", "video"}:
+        if seccion == "obra" and (extension != ".pdf" or tipo != "document"):
+            return respuesta_error("La sección Obras solo acepta archivos PDF.", 400)
+        if seccion != "obra" and extension == ".pdf":
+            return respuesta_error("Los archivos PDF deben publicarse desde la sección Obras.", 400)
+        if seccion != "obra" and tipo not in {"image", "video"}:
             return respuesta_error("Solo se permiten imágenes o videos en estas publicaciones.", 400)
         if seccion == "fotos" and tipo != "image":
             return respuesta_error("La sección Fotos solo admite imágenes.", 400)
@@ -856,6 +869,10 @@ def crear_publicacion() -> Any:
         media_path = f"publicaciones/{seccion}/{uuid.uuid4().hex}_{nombre_original}"
         try:
             contenido_archivo = archivo.read()
+            if len(contenido_archivo) > MAX_UPLOAD_BYTES:
+                return respuesta_error("El archivo supera el límite de 100 MB.", 413)
+            if seccion == "obra" and b"%PDF-" not in contenido_archivo[:1024]:
+                return respuesta_error("El archivo seleccionado no parece ser un PDF válido.", 400)
             subir_archivo_supabase(
                 SUPABASE_STORAGE_BUCKET,
                 media_path,
@@ -867,7 +884,7 @@ def crear_publicacion() -> Any:
                 SUPABASE_STORAGE_BUCKET,
                 media_path
             )
-            media_type = tipo
+            media_type = "pdf" if seccion == "obra" else tipo
         except Exception as error:
             app.logger.exception("No se pudo subir el medio de la publicación.")
             return respuesta_error(f"No se pudo subir el archivo: {error}", 500)

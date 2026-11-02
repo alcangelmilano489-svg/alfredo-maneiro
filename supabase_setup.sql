@@ -8,7 +8,7 @@ create table if not exists public.publicaciones (
     "mediaType" text,
     "mediaPath" text,
     seccion text not null default 'inicio'
-        check (seccion in ('inicio', 'fotos', 'videos')),
+        check (seccion in ('inicio', 'fotos', 'videos', 'obra')),
     fecha timestamptz not null default now()
 );
 
@@ -29,6 +29,12 @@ alter table public.publicaciones
     alter column seccion set default 'inicio',
     alter column seccion set not null,
     enable row level security;
+
+alter table public.publicaciones
+    drop constraint if exists publicaciones_seccion_check;
+alter table public.publicaciones
+    add constraint publicaciones_seccion_check
+    check (seccion in ('inicio', 'fotos', 'videos', 'obra'));
 
 drop policy if exists "Publicaciones visibles para visitantes"
     on public.publicaciones;

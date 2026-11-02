@@ -83,7 +83,10 @@
     <section id="obra" class="seccion-fija">
         <div class="seccion-header"><h2>Obra</h2></div>
         <div id="contenido-obra" class="contenido-seccion" style="white-space:pre-wrap;">
-            <p>Espacio dedicado al análisis y difusión de los aportes teóricos y políticos de Alfredo Maneiro.</p>
+            <p>Libros y documentos sobre el pensamiento y legado de Alfredo Maneiro. Selecciona una obra para leerla en línea o descargarla en PDF.</p>
+        </div>
+        <div id="lista-obras-pdf" class="lista-obras-pdf" aria-live="polite">
+            <p class="mensaje-vacio">Cargando libros PDF...</p>
         </div>
     </section>
 
@@ -572,6 +575,43 @@
 
         var realtimeActivo = false;
 
+        async function renderizarObrasPdf() {
+            var contenedor = document.getElementById('lista-obras-pdf');
+            if (!contenedor) return;
+            try {
+                var response = await fetch('/api/publicaciones?seccion=obra', { cache: 'no-store' });
+                var result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'No se pudieron cargar las obras.');
+                var obras = (result.publicaciones || []).filter(function(obra) {
+                    return obra.mediaType === 'pdf' && Boolean(urlMultimedia(obra.mediaUrl));
+                });
+                if (!obras.length) {
+                    contenedor.innerHTML = '<p class="mensaje-vacio">Próximamente se publicarán libros y documentos en PDF.</p>';
+                    return;
+                }
+                contenedor.innerHTML = obras.map(function(obra) {
+                    var pdfUrl = urlMultimedia(obra.mediaUrl);
+                    var tituloPlano = obra.titulo || 'Obra de Alfredo Maneiro';
+                    var titulo = escaparHtml(tituloPlano);
+                    var descripcion = escaparHtml(obra.texto || 'Libro o documento de Alfredo Maneiro.');
+                    var nombre = tituloPlano.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 80) + '.pdf';
+                    var descarga = new URL(pdfUrl);
+                    descarga.searchParams.set('download', nombre);
+                    return '<article class="obra-pdf-card">' +
+                        '<div class="obra-pdf-cabecera"><span class="obra-pdf-etiqueta">PDF</span><h3>' + titulo + '</h3></div>' +
+                        '<p class="obra-pdf-descripcion">' + descripcion + '</p>' +
+                        '<div class="obra-pdf-acciones">' +
+                            '<a class="obra-pdf-leer" href="' + escaparHtml(pdfUrl) + '" target="_blank" rel="noopener noreferrer">Leer en línea</a>' +
+                            '<a class="obra-pdf-descargar" href="' + escaparHtml(descarga.href) + '">Descargar PDF</a>' +
+                        '</div>' +
+                    '</article>';
+                }).join('');
+            } catch (error) {
+                console.error('No se pudieron cargar las obras PDF:', error);
+                contenedor.innerHTML = '<p class="mensaje-vacio">No se pudieron cargar los libros. Inténtalo de nuevo más tarde.</p>';
+            }
+        }
+
         async function renderizarSeccionesEditoriales() {
             try {
                 var response = await fetch('/api/secciones', { cache: 'no-store' });
@@ -585,7 +625,10 @@
                     var destino = document.getElementById('contenido-' + seccion);
                     var texto = contenido[seccion];
                     if (destino && typeof texto === 'string') {
-                        destino.textContent = texto.trim() ? texto : 'Aún no hay contenido publicado.';
+                        var textoObra = seccion === 'obra' && texto.length > 1000
+                            ? 'Libros y documentos sobre el pensamiento y legado de Alfredo Maneiro. Selecciona una obra para leerla en línea o descargarla en PDF.'
+                            : texto;
+                        destino.textContent = textoObra.trim() ? textoObra : 'Aún no hay contenido publicado.';
                         var imagenUrl = urlMultimedia(archivos[seccion]);
                         if (imagenUrl) {
                             var imagen = document.createElement('img');
@@ -609,6 +652,7 @@
 
         function actualizarContenidoPublico() {
             renderizarSeccionesEditoriales();
+            renderizarObrasPdf();
             renderizarNoticias();
             renderizarGaleria('fotos', 'galeria-fotos', 'image');
             renderizarGaleria('videos', 'galeria-videos', 'video');

@@ -105,18 +105,34 @@
 
             <!-- 3. SECCIÓN OBRA -->
             <div class="admin-card">
-                <h2>📚 Sección Obra</h2>
+                <h2>📖 Presentación breve de la Obra</h2>
+                <p style="color:#64748b;font-size:14px;margin:0 0 14px;">Para libros completos, usa la Biblioteca de Obras (PDF) que aparece debajo. Aquí puedes escribir solo una presentación breve.</p>
                 <label for="admin-titulo-obra">Título de la obra:</label>
                 <input type="text" id="admin-titulo-obra" placeholder="Título de la obra...">
-                <label for="admin-texto-obra">Descripción / Contenido:</label>
-                <textarea id="admin-texto-obra" placeholder="Escribe la descripción de la obra..."></textarea>
-                <label for="admin-archivo-obra">Adjuntar Archivo o Imagen opcional:</label>
-                <input type="file" id="admin-archivo-obra" accept="image/*,.pdf">
-                <button class="btn-actualizar" onclick="publicarSeccionEspecifica('obra', event)">Publicar en Obra</button>
+                <label for="admin-texto-obra">Descripción breve (máximo 1000 caracteres):</label>
+                <textarea id="admin-texto-obra" maxlength="1000" placeholder="Escribe una presentación breve; no pegues aquí el libro completo..."></textarea>
+                <label for="admin-archivo-obra">Adjuntar imagen ilustrativa opcional:</label>
+                <input type="file" id="admin-archivo-obra" accept="image/*">
+                <button class="btn-actualizar" onclick="publicarSeccionEspecifica('obra', event)">Guardar presentación breve</button>
                 <div class="admin-acciones-eliminar">
                     <button class="btn-eliminar" id="btn-eliminar-seccion-obra" type="button" onclick="eliminarSeccionEditorial('obra')" disabled>Eliminar contenido guardado de Obra</button>
                     <span id="estado-seccion-obra" aria-live="polite">Comprobando contenido guardado...</span>
                 </div>
+            </div>
+
+            <div class="admin-card">
+                <h2>📚 Biblioteca de Obras (PDF)</h2>
+                <p style="color:#64748b;font-size:14px;margin:0 0 14px;">Publica cada libro como PDF independiente para que los visitantes puedan leerlo o descargarlo. Tamaño máximo: 100 MB.</p>
+                <label for="admin-obra-pdf-titulo">Título del libro:</label>
+                <input type="text" id="admin-obra-pdf-titulo" maxlength="180" placeholder="Título del libro o documento">
+                <label for="admin-obra-pdf-descripcion">Descripción breve (opcional):</label>
+                <textarea id="admin-obra-pdf-descripcion" maxlength="1000" placeholder="Autor, edición o breve presentación"></textarea>
+                <label for="admin-obra-pdf-archivo">Archivo PDF:</label>
+                <input type="file" id="admin-obra-pdf-archivo" accept="application/pdf,.pdf">
+                <button class="btn-actualizar" type="button" onclick="publicarObraPdf(event)">Subir y publicar PDF</button>
+                <p id="estado-obra-pdf" aria-live="polite" style="font-size:13px;margin:10px 0 0;"></p>
+                <h3 style="margin:20px 0 8px;color:#334155;">Libros publicados</h3>
+                <div id="lista-admin-obras-pdf" aria-live="polite"><p style="color:#64748b;font-size:14px;">Inicia sesión para cargar la lista.</p></div>
             </div>
 
             <div class="admin-card">
@@ -186,6 +202,15 @@
             return String(valor == null ? '' : valor).replace(/[&<>"']/g, function(caracter) {
                 return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[caracter];
             });
+        }
+
+        function urlPdfAdmin(valor) {
+            try {
+                const url = new URL(String(valor || ''), window.location.origin);
+                return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+            } catch (error) {
+                return '';
+            }
         }
 
         async function leerJsonRespuesta(response) {
@@ -295,6 +320,7 @@
                     actualizarListaInicio(),
                     actualizarListaMultimedia('fotos'),
                     actualizarListaMultimedia('videos'),
+                    actualizarListaObrasPdf(),
                     actualizarEstadoSeccionesEditoriales(),
                     cargarContactoAdmin(),
                     cargarMensajesContactoAdmin(true)
@@ -451,6 +477,96 @@
             }
         }
 
+        async function publicarObraPdf(eventRef) {
+            const titulo = document.getElementById('admin-obra-pdf-titulo').value.trim();
+            const descripcion = document.getElementById('admin-obra-pdf-descripcion').value.trim();
+            const inputArchivo = document.getElementById('admin-obra-pdf-archivo');
+            const estado = document.getElementById('estado-obra-pdf');
+            const archivo = inputArchivo.files && inputArchivo.files[0];
+            if (!titulo) {
+                estado.textContent = 'Escribe el título del libro.';
+                estado.style.color = '#b91c1c';
+                return;
+            }
+            if (!archivo || !/\.pdf$/i.test(archivo.name)) {
+                estado.textContent = 'Selecciona un archivo con extensión PDF.';
+                estado.style.color = '#b91c1c';
+                return;
+            }
+            if (archivo.size > 100 * 1024 * 1024) {
+                estado.textContent = 'El archivo supera el límite de 100 MB.';
+                estado.style.color = '#b91c1c';
+                return;
+            }
+
+            const boton = eventRef.currentTarget || eventRef.target;
+            const textoOriginal = boton.textContent;
+            boton.disabled = true;
+            boton.textContent = 'Subiendo PDF...';
+            estado.textContent = 'El archivo se está cargando.';
+            estado.style.color = '#475569';
+            try {
+                const datos = new FormData();
+                datos.append('titulo', titulo);
+                datos.append('texto', descripcion);
+                datos.append('seccion', 'obra');
+                datos.append('file', archivo);
+                const response = await fetch('/api/publicaciones', {
+                    method: 'POST',
+                    headers: { 'X-Admin-Password': adminPassword },
+                    body: datos
+                });
+                const result = await leerJsonRespuesta(response);
+                if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo subir el PDF.');
+                document.getElementById('admin-obra-pdf-titulo').value = '';
+                document.getElementById('admin-obra-pdf-descripcion').value = '';
+                inputArchivo.value = '';
+                estado.textContent = 'PDF publicado correctamente en Obras.';
+                estado.style.color = '#166534';
+                await actualizarListaObrasPdf();
+            } catch (error) {
+                estado.textContent = 'No se pudo subir: ' + (error.message || 'error de conexión.');
+                estado.style.color = '#b91c1c';
+            } finally {
+                boton.disabled = false;
+                boton.textContent = textoOriginal;
+            }
+        }
+
+        async function actualizarListaObrasPdf() {
+            const contenedor = document.getElementById('lista-admin-obras-pdf');
+            if (!contenedor) return;
+            contenedor.innerHTML = '<p style="color:#64748b;font-size:14px;">Cargando libros PDF...</p>';
+            try {
+                const items = [];
+                let offset = 0;
+                while (true) {
+                    const response = await fetch('/api/publicaciones?seccion=obra&offset=' + offset, { cache: 'no-store' });
+                    const result = await leerJsonRespuesta(response);
+                    if (!response.ok || !result.success) throw new Error(result.error || 'No se pudieron cargar los libros.');
+                    const pagina = result.publicaciones || [];
+                    items.push(...pagina);
+                    if (pagina.length < 100) break;
+                    offset += pagina.length;
+                    if (offset > 1000000) throw new Error('No se pudo terminar de cargar la lista.');
+                }
+                if (!items.length) {
+                    contenedor.innerHTML = '<p style="color:#64748b;font-size:14px;">Todavía no hay libros PDF publicados.</p>';
+                    return;
+                }
+                contenedor.innerHTML = items.map(function(item) {
+                    const titulo = item.titulo || 'Obra sin título';
+                    const url = urlPdfAdmin(item.mediaUrl);
+                    return '<div class="item-lista"><div><strong style="color:#1e3a8a;">' + escaparHtmlAdmin(titulo) + '</strong>' +
+                        '<p style="margin:4px 0 0;font-size:13px;color:#475569;">PDF' + (item.fecha ? ' · ' + escaparHtmlAdmin(item.fecha) : '') + '</p>' +
+                        (url ? '<a href="' + escaparHtmlAdmin(url) + '" target="_blank" rel="noopener noreferrer">Abrir PDF</a>' : '') + '</div>' +
+                        '<button class="btn-eliminar" type="button" data-id="' + escaparHtmlAdmin(item.id || '') + '" data-titulo="' + escaparHtmlAdmin(titulo) + '" onclick="eliminarPublicacion(this.dataset.id, \'obra\', this.dataset.titulo, this)">Eliminar</button></div>';
+                }).join('');
+            } catch (error) {
+                contenedor.innerHTML = '<p style="color:#b91c1c;font-size:14px;">' + escaparHtmlAdmin(error.message || 'No se pudieron cargar los libros.') + '</p>';
+            }
+        }
+
         async function actualizarListaInicio() {
             let contenedor = document.getElementById('lista-admin-inicio');
             contenedor.innerHTML = '<p style="color: #64748b; font-size: 14px;">Cargando publicaciones...</p>';
@@ -592,7 +708,7 @@
 
         async function eliminarPublicacion(id, seccion, titulo, boton) {
             seccion = seccion || 'inicio';
-            const etiqueta = seccion === 'fotos' ? 'la sección Fotos' : (seccion === 'videos' ? 'la sección Videos' : 'Inicio');
+            const etiqueta = seccion === 'fotos' ? 'la sección Fotos' : (seccion === 'videos' ? 'la sección Videos' : (seccion === 'obra' ? 'la sección Obras' : 'Inicio'));
             const nombre = titulo ? ' «' + titulo + '»' : '';
             if (!confirm('¿Eliminar' + nombre + ' de ' + etiqueta + '? También se eliminarán los comentarios asociados. Esta acción no se puede deshacer.')) return;
             if (boton) boton.disabled = true;
@@ -607,7 +723,9 @@
                     throw new Error(result.error || 'No se pudo eliminar.');
                 }
                 alert("Publicación eliminada correctamente.");
-                if (seccion === 'fotos' || seccion === 'videos') {
+                if (seccion === 'obra') {
+                    await actualizarListaObrasPdf();
+                } else if (seccion === 'fotos' || seccion === 'videos') {
                     await actualizarListaMultimedia(seccion);
                 } else {
                     await actualizarListaInicio();
