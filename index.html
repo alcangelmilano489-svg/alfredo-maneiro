@@ -548,6 +548,9 @@
                     if (!mediaUrl) return '';
                     var titulo = escaparHtml(publicacion.titulo || '');
                     if (tipo === 'video') {
+                        if (publicacion.mediaType === 'youtube') {
+                            return '<div class="video-item video-link-item"><a class="video-youtube-link" href="' + escaparHtml(mediaUrl) + '" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">▶</span><span>Ver video en YouTube</span></a><small>' + titulo + '</small></div>';
+                        }
                         return '<div class="video-item"><video src="' + escaparHtml(mediaUrl) + '" controls preload="metadata"></video><small>' + titulo + '</small></div>';
                         } else {
                         return '<div class="foto-item"><img src="' + escaparHtml(mediaUrl) + '" alt="' + titulo + '"><small>' + titulo + '</small></div>';

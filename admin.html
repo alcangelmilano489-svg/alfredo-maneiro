@@ -147,9 +147,13 @@
             <!-- 5. SECCIÓN VIDEOS -->
             <div class="admin-card">
                 <h2>🎥 Sección Videos</h2>
+                <label for="admin-video-archivo">Subir un video corto (máximo 100 MB):</label>
                 <input type="file" id="admin-video-archivo" accept="video/*">
+                <label for="admin-video-youtube">O pegar un enlace HTTPS de YouTube:</label>
+                <input type="url" id="admin-video-youtube" placeholder="https://www.youtube.com/watch?v=...">
+                <label for="admin-video-nombre">Título del video:</label>
                 <input type="text" id="admin-video-nombre" placeholder="Título del video">
-                <button class="btn-actualizar" onclick="subirMultimedia('videos', 'admin-video-archivo', 'admin-video-nombre', 'video', event)">Subir Video</button>
+                <button class="btn-actualizar" onclick="subirMultimedia('videos', 'admin-video-archivo', 'admin-video-nombre', 'video', event)">Publicar video o enlace</button>
                 <h3 style="margin: 18px 0 8px; color: #334155;">Videos publicados</h3>
                 <div id="lista-admin-videos" aria-live="polite"><p style="color: #64748b; font-size: 14px;">Inicia sesión para cargar la lista.</p></div>
             </div>
@@ -419,9 +423,16 @@
         async function subirMultimedia(seccionDestino, idInputArchivo, idInputNombre, tipoMedio, eventRef) {
             let inputArchivo = document.getElementById(idInputArchivo);
             let nombreVal = document.getElementById(idInputNombre).value.trim();
+            let inputYoutube = seccionDestino === 'videos' ? document.getElementById('admin-video-youtube') : null;
+            let enlaceYoutube = inputYoutube ? inputYoutube.value.trim() : '';
+            let archivo = inputArchivo.files && inputArchivo.files[0];
 
-            if (!inputArchivo.files || !inputArchivo.files[0]) {
-                alert("Selecciona un archivo primero.");
+            if (enlaceYoutube && archivo) {
+                alert("Elige subir un archivo corto o pegar un enlace de YouTube, no ambos.");
+                return;
+            }
+            if (!archivo && !(seccionDestino === 'videos' && enlaceYoutube)) {
+                alert(seccionDestino === 'videos' ? "Selecciona un video o pega un enlace de YouTube." : "Selecciona un archivo primero.");
                 return;
             }
 
@@ -431,10 +442,10 @@
             btn.disabled = true;
 
             try {
-                const file = inputArchivo.files[0];
                 const formData = new FormData();
-                formData.append('file', file);
-                formData.append('titulo', nombreVal || 'Archivo sin título');
+                if (archivo) formData.append('file', archivo);
+                if (enlaceYoutube) formData.append('youtube_url', enlaceYoutube);
+                formData.append('titulo', nombreVal || (seccionDestino === 'videos' ? 'Video sin título' : 'Archivo sin título'));
                 formData.append('texto', '');
                 formData.append('seccion', seccionDestino);
 
@@ -447,8 +458,9 @@
 
                 if (response.ok && result.success) {
                     inputArchivo.value = "";
+                    if (inputYoutube) inputYoutube.value = "";
                     document.getElementById(idInputNombre).value = "";
-                    alert("¡Archivo guardado y añadido a " + seccionDestino.toUpperCase() + "!");
+                    alert(enlaceYoutube ? "¡Enlace de YouTube publicado en Videos!" : "¡Archivo guardado y añadido a " + seccionDestino.toUpperCase() + "!");
                     await actualizarListaMultimedia(seccionDestino);
                 } else {
                     throw new Error(result.error || 'No se pudo guardar el archivo.');
@@ -618,12 +630,16 @@
 
                 contenedor.innerHTML = items.map(function(item) {
                     const titulo = item.titulo || (seccion === 'fotos' ? 'Foto sin título' : 'Video sin título');
-                    const tipo = seccion === 'fotos' ? 'Imagen' : 'Video';
+                    const tipo = seccion === 'fotos' ? 'Imagen' : (item.mediaType === 'youtube' ? 'Enlace de YouTube' : 'Video');
+                    const enlaceYoutube = seccion === 'videos' && item.mediaType === 'youtube' && item.mediaUrl
+                        ? '<a href="' + escaparHtmlAdmin(item.mediaUrl) + '" target="_blank" rel="noopener noreferrer">Abrir YouTube</a>'
+                        : '';
                     return `
                         <div class="item-lista">
                             <div>
                                 <strong style="color: #1e3a8a;">${escaparHtmlAdmin(titulo)}</strong>
                                 <p style="margin: 4px 0 0; font-size: 13px; color: #475569;">${tipo}${item.fecha ? ' · ' + escaparHtmlAdmin(item.fecha) : ''}</p>
+                                ${enlaceYoutube}
                             </div>
                             <button class="btn-eliminar" type="button" data-id="${escaparHtmlAdmin(item.id || '')}" data-seccion="${seccion}" data-titulo="${escaparHtmlAdmin(titulo)}" onclick="eliminarPublicacion(this.dataset.id, this.dataset.seccion, this.dataset.titulo, this)">Eliminar</button>
                         </div>

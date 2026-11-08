@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Optional, Dict, List, Union, Tuple, Set, cast
-from urllib.parse import unquote, urlsplit, urlunsplit
+from urllib.parse import parse_qs, unquote, urlsplit, urlunsplit
 
 import httpx
 from flask import Flask, jsonify, request, send_from_directory, Response
@@ -84,6 +84,32 @@ SECCIONES_PUBLICACIONES: Set[str] = {
     "videos",
     "obra"
 }
+
+
+def obtener_id_video_youtube(enlace: str) -> Optional[str]:
+    """Acepta enlaces HTTPS de YouTube y devuelve únicamente el ID del video."""
+    try:
+        partes = urlsplit((enlace or "").strip())
+        host = (partes.hostname or "").lower().rstrip(".")
+        if partes.scheme.lower() != "https" or partes.username or partes.password or partes.port is not None:
+            return None
+
+        if host == "youtu.be":
+            video_id = partes.path.strip("/").split("/", 1)[0]
+        elif host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+            segmentos = [segmento for segmento in partes.path.split("/") if segmento]
+            if partes.path == "/watch":
+                video_id = parse_qs(partes.query).get("v", [""])[0]
+            elif len(segmentos) >= 2 and segmentos[0] in {"embed", "shorts", "live"}:
+                video_id = segmentos[1]
+            else:
+                return None
+        else:
+            return None
+
+        return video_id if re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id or "") else None
+    except (TypeError, ValueError):
+        return None
 
 
 # ============================================================
@@ -828,6 +854,8 @@ def crear_publicacion() -> Any:
     titulo = request.form.get("titulo", "").strip()
     texto = request.form.get("texto", "").strip()
     archivo = request.files.get("file")
+    enlace_youtube = request.form.get("youtube_url", "").strip()
+    id_video_youtube = obtener_id_video_youtube(enlace_youtube) if enlace_youtube else None
 
     if len(titulo) > 300 or len(texto) > 100000:
         return respuesta_error("El título o el texto supera el límite permitido.", 400)
@@ -839,14 +867,24 @@ def crear_publicacion() -> Any:
         return respuesta_error("La descripción no puede superar los 1000 caracteres.", 400)
     if seccion == "obra" and not (archivo and archivo.filename):
         return respuesta_error("Selecciona un libro o documento PDF para Obras.", 400)
-    if not titulo and not texto and not (archivo and archivo.filename):
+    if enlace_youtube and seccion != "videos":
+        return respuesta_error("Los enlaces de YouTube solo se pueden publicar en Videos.", 400)
+    if enlace_youtube and id_video_youtube is None:
+        return respuesta_error("Pega un enlace HTTPS válido de YouTube.", 400)
+    if enlace_youtube and archivo and archivo.filename:
+        return respuesta_error("Elige subir un archivo o publicar un enlace de YouTube, no ambos.", 400)
+    if not titulo and not texto and not (archivo and archivo.filename) and not id_video_youtube:
         return respuesta_error("Indica un título, texto o archivo.", 400)
-    if seccion in {"fotos", "videos"} and not (archivo and archivo.filename):
+    if seccion in {"fotos", "videos"} and not (archivo and archivo.filename) and not id_video_youtube:
         return respuesta_error("Selecciona un archivo para la galería.", 400)
 
     media_url: Optional[str] = None
     media_type: Optional[str] = None
     media_path: Optional[str] = None
+
+    if id_video_youtube:
+        media_url = f"https://www.youtube.com/watch?v={id_video_youtube}"
+        media_type = "youtube"
 
     if archivo and archivo.filename:
         nombre_original = secure_filename(archivo.filename)

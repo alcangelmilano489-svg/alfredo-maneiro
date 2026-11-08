@@ -274,6 +274,32 @@ body {
     display: block;
 }
 
+.galeria-videos .video-link-item {
+    background: #ffffff;
+}
+
+.galeria-videos .video-youtube-link {
+    display: flex;
+    min-height: 200px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    box-sizing: border-box;
+    background: #b91c1c;
+    color: #ffffff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.galeria-videos .video-youtube-link span:first-child {
+    font-size: 32px;
+}
+
+.galeria-videos .video-youtube-link:hover {
+    background: #991b1b;
+}
+
 .galeria-videos .video-item small {
     display: block;
     padding: 10px;

@@ -459,6 +459,70 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertEqual(deleted.status_code, 200)
         self.assertEqual(self.database.publications, [])
 
+    def test_admin_can_publish_youtube_link_without_uploading_file(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        with patch.object(servidor, "subir_archivo_supabase") as upload:
+            response = self.client.post(
+                "/api/publicaciones",
+                data={
+                    "seccion": "videos",
+                    "titulo": "Video de prueba",
+                    "youtube_url": "https://youtu.be/dQw4w9WgXcQ",
+                },
+                headers=headers,
+            )
+
+        self.assertEqual(response.status_code, 200, response.get_json())
+        publication = response.get_json()["publicacion"]
+        self.assertEqual(publication["mediaUrl"], "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        self.assertEqual(publication["mediaType"], "youtube")
+        self.assertIsNone(publication["mediaPath"])
+        upload.assert_not_called()
+        self.assertEqual(
+            servidor.obtener_id_video_youtube(
+                "https://www.youtube.com/shorts/dQw4w9WgXcQ?feature=share"
+            ),
+            "dQw4w9WgXcQ",
+        )
+
+    def test_admin_can_delete_youtube_publication_without_storage_delete(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        self.database.publications = [{
+            "id": "youtube-post",
+            "seccion": "videos",
+            "titulo": "Enlace de video",
+            "mediaUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "mediaType": "youtube",
+            "mediaPath": None,
+        }]
+
+        with patch.object(servidor.httpx, "request") as storage_request:
+            deleted = self.client.delete(
+                "/api/publicaciones/youtube-post?seccion=videos",
+                headers=headers,
+            )
+
+        self.assertEqual(deleted.status_code, 200, deleted.get_json())
+        self.assertEqual(self.database.publications, [])
+        storage_request.assert_not_called()
+
+    def test_youtube_link_validation_rejects_other_hosts_and_malformed_ids(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        for url in (
+            "https://example.com/watch?v=dQw4w9WgXcQ",
+            "https://www.youtube.com/watch?v=invalid",
+            "http://youtu.be/dQw4w9WgXcQ",
+        ):
+            with self.subTest(url=url):
+                response = self.client.post(
+                    "/api/publicaciones",
+                    data={"seccion": "videos", "youtube_url": url},
+                    headers=headers,
+                )
+                self.assertEqual(response.status_code, 400)
+
+        self.assertEqual(self.database.publications, [])
+
     def test_admin_can_delete_publication_with_media(self):
         headers = {"X-Admin-Password": "test-admin-password"}
         publication = {
