@@ -458,7 +458,7 @@ body {
 
 .post-card h3 {
     font-size: 18px;
-    color: #0b1f4d;
+    color: #b91c1c;
     margin-bottom: 12px;
     font-weight: 700;
 }
@@ -469,6 +469,32 @@ body {
     line-height: 1.7;
     margin-bottom: 15px;
     white-space: pre-line;
+}
+
+.post-card .btn-leer-mas {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: -5px 0 15px;
+    padding: 8px 14px;
+    border: 1px solid #b91c1c;
+    border-radius: 6px;
+    background: #b91c1c;
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.post-card .btn-leer-mas:hover {
+    background: #991b1b;
+    border-color: #991b1b;
+}
+
+.post-card .btn-leer-mas:focus-visible {
+    outline: 3px solid #fecaca;
+    outline-offset: 2px;
 }
 
 .post-card .post-media-video {

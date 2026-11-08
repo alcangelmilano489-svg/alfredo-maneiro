@@ -419,6 +419,19 @@
             }
         }
 
+        function toggleArticulo(postIdSeguro) {
+            var resumen = document.getElementById('resumen-' + postIdSeguro);
+            var completo = document.getElementById('completo-' + postIdSeguro);
+            var boton = document.getElementById('leer-mas-' + postIdSeguro);
+            if (!resumen || !completo || !boton) return;
+
+            var expandido = boton.getAttribute('aria-expanded') === 'true';
+            resumen.hidden = !expandido;
+            completo.hidden = expandido;
+            boton.setAttribute('aria-expanded', String(!expandido));
+            boton.textContent = expandido ? 'Leer más' : 'Leer menos';
+        }
+
         async function renderizarNoticias() {
             var contenedor = document.getElementById('contenedor-noticias-admin');
             if (!contenedor) return;
@@ -455,6 +468,15 @@
                     var postIdSeguro = String(postId).replace(/[^a-zA-Z0-9_-]/g, '_');
                     var tituloHtml = escaparHtml(n.titulo || '');
                     var textoHtml = escaparHtml(n.texto || '');
+                    var textoOriginal = String(n.texto || '').trim();
+                    var limiteResumen = 320;
+                    var necesitaLeerMas = textoOriginal.length > limiteResumen;
+                    var textoResumen = textoOriginal;
+                    if (necesitaLeerMas) {
+                        var corteResumen = textoOriginal.lastIndexOf(' ', limiteResumen);
+                        if (corteResumen < 180) corteResumen = limiteResumen;
+                        textoResumen = textoOriginal.slice(0, corteResumen).replace(/\s+$/, '') + '…';
+                    }
                     var mediaUrl = urlMultimedia(n.mediaUrl);
                     var esVideo = n.mediaType === 'video' || /\.(mp4|m4v|mov|webm)(?:$|[?#])/i.test(mediaUrl);
 
@@ -464,7 +486,14 @@
                             '<span class="post-date">' + escaparHtml(n.fecha || '') + '</span>' +
                         '</div>' +
                         '<h3>' + tituloHtml + '</h3>' +
-                        '<p class="post-texto">' + textoHtml + '</p>';
+                        '<p class="post-texto">' + (necesitaLeerMas
+                            ? '<span id="resumen-' + postIdSeguro + '">' + escaparHtml(textoResumen) + '</span>' +
+                              '<span id="completo-' + postIdSeguro + '" hidden>' + textoHtml + '</span>'
+                            : textoHtml) + '</p>';
+
+                    if (necesitaLeerMas) {
+                        html += '<button type="button" id="leer-mas-' + postIdSeguro + '" class="btn-leer-mas" aria-controls="completo-' + postIdSeguro + '" aria-expanded="false" onclick="toggleArticulo(\'' + postIdSeguro + '\')">Leer más</button>';
+                    }
 
                     if (mediaUrl && esVideo) {
                         html += '<video src="' + escaparHtml(mediaUrl) + '" controls playsinline preload="metadata" class="post-media-video" style="width:100%; border-radius:8px; margin-top:10px;"></video>';
