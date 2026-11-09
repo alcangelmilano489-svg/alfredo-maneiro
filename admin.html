@@ -456,6 +456,11 @@
                 });
                 const result = await response.json();
 
+                if (response.status === 409 && result.duplicate) {
+                    alert(result.error || 'Esta imagen ya está publicada en Fotos. No se subió otra copia.');
+                    return;
+                }
+
                 if (response.ok && result.success) {
                     inputArchivo.value = "";
                     if (inputYoutube) inputYoutube.value = "";

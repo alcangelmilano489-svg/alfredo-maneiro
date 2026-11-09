@@ -1,3 +1,4 @@
+import io
 import os
 import sys
 import unittest
@@ -257,6 +258,7 @@ class EditorialSectionsApiTests(unittest.TestCase):
         servidor.SUPABASE_CONFIG_ERROR = None
         servidor.SUPABASE_WRITE_KEY = "test-service-role-key"
         servidor.ADMIN_PASSWORD = "test-admin-password"
+        servidor.DUPLICATE_PHOTO_HASH_CACHE.clear()
         self.client = servidor.app.test_client()
 
     def test_public_read_returns_all_editorial_sections(self):
@@ -425,12 +427,13 @@ class EditorialSectionsApiTests(unittest.TestCase):
 
     def test_carousel_includes_each_new_photo_in_both_loop_halves(self):
         html = (ROOT / "index.html").read_text(encoding="utf-8")
+        self.assertIn("fotos.concat(fotos)", html)
         for filename in (
             "maneiro-foto-galeria-01.jpg",
             "maneiro-foto-galeria-02.jpg",
         ):
             with self.subTest(filename=filename):
-                self.assertEqual(html.count("/assets/" + filename), 2)
+                self.assertEqual(html.count("/assets/" + filename), 1)
 
     def test_rejects_unknown_section_and_non_text_content(self):
         headers = {"X-Admin-Password": "test-admin-password"}
@@ -480,6 +483,56 @@ class EditorialSectionsApiTests(unittest.TestCase):
             headers=headers,
         )
         self.assertEqual(deleted.status_code, 200)
+        self.assertEqual(self.database.publications, [])
+
+    def test_finds_photo_duplicate_by_file_content(self):
+        self.database.publications = [{
+            "id": "existing-photo",
+            "titulo": "Foto ya publicada",
+            "seccion": "fotos",
+            "mediaType": "image",
+            "mediaPath": "publicaciones/fotos/existing.jpg",
+        }]
+        stored_image = b"identical image content"
+        storage_response = SimpleNamespace(
+            status_code=200,
+            is_success=True,
+            content=stored_image,
+        )
+
+        with patch.object(
+            servidor.httpx,
+            "get",
+            return_value=storage_response,
+        ) as storage_get:
+            duplicate = servidor.buscar_foto_duplicada(stored_image)
+
+        self.assertEqual(duplicate["id"], "existing-photo")
+        storage_get.assert_called_once()
+
+    def test_duplicate_photo_is_rejected_before_storage_upload(self):
+        headers = {"X-Admin-Password": "test-admin-password"}
+        duplicate = {"id": "existing-photo", "titulo": "Foto anterior"}
+
+        with patch.object(
+            servidor,
+            "buscar_foto_duplicada",
+            return_value=duplicate,
+        ), patch.object(servidor, "subir_archivo_supabase") as upload:
+            response = self.client.post(
+                "/api/publicaciones",
+                data={
+                    "seccion": "fotos",
+                    "titulo": "Intento de duplicado",
+                    "file": (io.BytesIO(b"identical image content"), "foto.jpg"),
+                },
+                headers=headers,
+            )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertTrue(response.get_json()["duplicate"])
+        self.assertIn("No se subió otra copia", response.get_json()["error"])
+        upload.assert_not_called()
         self.assertEqual(self.database.publications, [])
 
     def test_admin_can_publish_youtube_link_without_uploading_file(self):

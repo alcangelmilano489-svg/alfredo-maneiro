@@ -1,3 +1,4 @@
+import hashlib
 import hmac
 import os
 import re
@@ -65,6 +66,8 @@ ADMIN_PASSWORD = (
 SUPABASE_STORAGE_BUCKET = (
     os.environ.get("SUPABASE_STORAGE_BUCKET") or "media"
 ).strip()
+
+DUPLICATE_PHOTO_HASH_CACHE: Dict[Tuple[str, str], str] = {}
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
@@ -506,6 +509,75 @@ def obtener_url_publica(
     return ""
 
 
+def buscar_foto_duplicada(contenido: bytes) -> Optional[Dict[str, Any]]:
+    """Busca una foto idéntica entre las fotos ya publicadas."""
+    hash_nuevo = hashlib.sha256(contenido).hexdigest()
+    offset = 0
+
+    while True:
+        consulta = (
+            supabase_admin
+            .table("publicaciones")
+            .select("id,titulo,mediaUrl,mediaPath,mediaType")
+            .eq("seccion", "fotos")
+            .order("fecha", desc=True)
+            .range(offset, offset + 99)
+        )
+        publicaciones = cast(List[Any], consulta.execute().data or [])
+
+        for publicacion in publicaciones:
+            if publicacion.get("mediaType") not in (None, "image"):
+                continue
+
+            media_path = publicacion.get("mediaPath") or ruta_storage_desde_url(
+                publicacion.get("mediaUrl"),
+                SUPABASE_STORAGE_BUCKET
+            )
+            media_path = str(media_path or "").strip("/")
+            segmentos = media_path.split("/") if media_path else []
+            if (
+                not media_path.startswith("publicaciones/")
+                or not segmentos
+                or any(segmento in {"", ".", ".."} for segmento in segmentos)
+            ):
+                continue
+
+            cache_key = (SUPABASE_STORAGE_BUCKET, media_path)
+            hash_existente = DUPLICATE_PHOTO_HASH_CACHE.get(cache_key)
+            if hash_existente is None:
+                ruta_url = "/".join(quote_segmento(segmento) for segmento in segmentos)
+                url = (
+                    f"{SUPABASE_URL}/storage/v1/object/public/"
+                    f"{quote_segmento(SUPABASE_STORAGE_BUCKET)}/{ruta_url}"
+                )
+                try:
+                    response = httpx.get(url, timeout=30.0)
+                except httpx.HTTPError as error:
+                    raise RuntimeError(
+                        "No se pudo comprobar una foto ya publicada."
+                    ) from error
+
+                if response.status_code == 404:
+                    continue
+                if not response.is_success:
+                    raise RuntimeError(
+                        "No se pudo comprobar una foto ya publicada "
+                        f"(HTTP {response.status_code})."
+                    )
+
+                hash_existente = hashlib.sha256(response.content).hexdigest()
+                DUPLICATE_PHOTO_HASH_CACHE[cache_key] = hash_existente
+
+            if hash_existente == hash_nuevo:
+                return publicacion
+
+        if len(publicaciones) < 100:
+            break
+        offset += len(publicaciones)
+
+    return None
+
+
 # ============================================================
 # UUID DE PUBLICACIÓN
 # ============================================================
@@ -883,6 +955,7 @@ def crear_publicacion() -> Any:
     media_url: Optional[str] = None
     media_type: Optional[str] = None
     media_path: Optional[str] = None
+    contenido_archivo: Optional[bytes] = None
 
     if id_video_youtube:
         media_url = f"https://www.youtube.com/watch?v={id_video_youtube}"
@@ -914,6 +987,26 @@ def crear_publicacion() -> Any:
                 return respuesta_error("El archivo supera el límite de 100 MB.", 413)
             if seccion == "obra" and b"%PDF-" not in contenido_archivo[:1024]:
                 return respuesta_error("El archivo seleccionado no parece ser un PDF válido.", 400)
+            if seccion == "fotos":
+                try:
+                    duplicada = buscar_foto_duplicada(contenido_archivo)
+                except Exception:
+                    app.logger.exception("No se pudo comprobar si la foto está repetida.")
+                    return respuesta_error(
+                        "No se pudo comprobar si esta foto ya está publicada. "
+                        "No se subió; inténtalo de nuevo.",
+                        503
+                    )
+                if duplicada:
+                    return jsonify({
+                        "success": False,
+                        "duplicate": True,
+                        "error": (
+                            "Esta imagen ya está publicada en Fotos y también "
+                            "aparece en el carrusel. No se subió otra copia."
+                        )
+                    }), 409
+
             subir_archivo_supabase(
                 SUPABASE_STORAGE_BUCKET,
                 media_path,
@@ -959,6 +1052,11 @@ def crear_publicacion() -> Any:
             )
             filas = cast(List[Any], respuesta_insert.data or [])
             publicacion = filas[0] if filas else fila
+
+        if seccion == "fotos" and media_path and contenido_archivo is not None:
+            DUPLICATE_PHOTO_HASH_CACHE[(SUPABASE_STORAGE_BUCKET, media_path)] = (
+                hashlib.sha256(contenido_archivo).hexdigest()
+            )
 
         return jsonify({"success": True, "publicacion": publicacion})
 
