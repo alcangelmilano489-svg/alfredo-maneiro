@@ -127,6 +127,8 @@ PUBLIC_ASSETS = {
     "maneiro7.jpeg",
     "maneiro8.jpeg",
     "neiro1.jpeg",
+    "maneiro-foto-galeria-01.jpg",
+    "maneiro-foto-galeria-02.jpg",
 }
 
 

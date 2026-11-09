@@ -532,34 +532,54 @@
         async function renderizarGaleria(seccion, idContenedor, tipo) {
             var contenedor = document.getElementById(idContenedor);
             if (!contenedor) return;
+            var fotosAñadidas = seccion === 'fotos' ? [
+                {
+                    titulo: 'Alfredo Maneiro',
+                    alt: 'Alfredo Maneiro junto a una niña en una fotografía al aire libre',
+                    mediaUrl: '/assets/maneiro-foto-galeria-01.jpg',
+                    mediaType: 'image'
+                },
+                {
+                    titulo: 'Alfredo Maneiro',
+                    alt: 'Alfredo Maneiro junto a una mujer en una fotografía al aire libre',
+                    mediaUrl: '/assets/maneiro-foto-galeria-02.jpg',
+                    mediaType: 'image'
+                }
+            ] : [];
+            var publicaciones = [];
+            var errorCarga = false;
 
             try {
                 var response = await fetch('/api/publicaciones?seccion=' + encodeURIComponent(seccion), { cache: 'no-store' });
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 var data = await response.json();
-                var publicaciones = data.success ? data.publicaciones : [];
-                if (!publicaciones.length) {
-                    contenedor.innerHTML = '<p class="mensaje-vacio">No hay contenido publicado todavía.</p>';
-                    return;
-                }
-
-                contenedor.innerHTML = publicaciones.map(function(publicacion) {
-                    var mediaUrl = urlMultimedia(publicacion.mediaUrl);
-                    if (!mediaUrl) return '';
-                    var titulo = escaparHtml(publicacion.titulo || '');
-                    if (tipo === 'video') {
-                        if (publicacion.mediaType === 'youtube') {
-                            return '<div class="video-item video-link-item"><a class="video-youtube-link" href="' + escaparHtml(mediaUrl) + '" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">▶</span><span>Ver video en YouTube</span></a><small>' + titulo + '</small></div>';
-                        }
-                        return '<div class="video-item"><video src="' + escaparHtml(mediaUrl) + '" controls preload="metadata"></video><small>' + titulo + '</small></div>';
-                        } else {
-                        return '<div class="foto-item"><img src="' + escaparHtml(mediaUrl) + '" alt="' + titulo + '"><small>' + titulo + '</small></div>';
-                        }
-                }).join('');
+                publicaciones = data.success ? data.publicaciones : [];
             } catch (error) {
                 console.error('Error al cargar la galería:', error);
-                contenedor.innerHTML = '<p class="mensaje-vacio">No se pudo cargar el contenido.</p>';
+                errorCarga = true;
             }
+
+            publicaciones = fotosAñadidas.concat(publicaciones);
+            if (!publicaciones.length) {
+                contenedor.innerHTML = errorCarga
+                    ? '<p class="mensaje-vacio">No se pudo cargar el contenido.</p>'
+                    : '<p class="mensaje-vacio">No hay contenido publicado todavía.</p>';
+                return;
+            }
+
+            contenedor.innerHTML = publicaciones.map(function(publicacion) {
+                var mediaUrl = urlMultimedia(publicacion.mediaUrl);
+                if (!mediaUrl) return '';
+                var titulo = escaparHtml(publicacion.titulo || '');
+                if (tipo === 'video') {
+                    if (publicacion.mediaType === 'youtube') {
+                        return '<div class="video-item video-link-item"><a class="video-youtube-link" href="' + escaparHtml(mediaUrl) + '" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">▶</span><span>Ver video en YouTube</span></a><small>' + titulo + '</small></div>';
+                    }
+                    return '<div class="video-item"><video src="' + escaparHtml(mediaUrl) + '" controls preload="metadata"></video><small>' + titulo + '</small></div>';
+                }
+                var alt = escaparHtml(publicacion.alt || publicacion.titulo || 'Foto de Alfredo Maneiro');
+                return '<div class="foto-item"><img src="' + escaparHtml(mediaUrl) + '" alt="' + alt + '"><small>' + titulo + '</small></div>';
+            }).join('');
         }
 
         function crearTarjetaContacto(icono, titulo, detalle, href) {

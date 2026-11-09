@@ -409,6 +409,20 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertIn("application/xml", sitemap.content_type)
         self.assertIn("<loc>https://alfredomaneiro.org.ve/</loc>", sitemap.get_data(as_text=True))
 
+    def test_added_gallery_photos_are_publicly_served(self):
+        for filename in (
+            "maneiro-foto-galeria-01.jpg",
+            "maneiro-foto-galeria-02.jpg",
+        ):
+            with self.subTest(filename=filename):
+                response = self.client.get("/assets/" + filename)
+                try:
+                    self.assertEqual(response.status_code, 200)
+                    self.assertIn("image/jpeg", response.content_type)
+                    self.assertEqual(response.data, (ROOT / filename).read_bytes())
+                finally:
+                    response.close()
+
     def test_rejects_unknown_section_and_non_text_content(self):
         headers = {"X-Admin-Password": "test-admin-password"}
         unknown = self.client.put(
