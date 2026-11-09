@@ -457,7 +457,7 @@
                 const result = await response.json();
 
                 if (response.status === 409 && result.duplicate) {
-                    alert(result.error || 'Esta imagen ya está publicada en Fotos. No se subió otra copia.');
+                    alert(result.error || 'Esta imagen ya está publicada en Fotos. El título no influye. No se subió otra copia.');
                     return;
                 }
 

@@ -1,4 +1,3 @@
-import hashlib
 import hmac
 import os
 import re
@@ -9,7 +8,9 @@ from pathlib import Path
 from typing import Any, Optional, Dict, List, Union, Tuple, Set, cast
 from urllib.parse import parse_qs, unquote, urlsplit, urlunsplit
 
+import cv2
 import httpx
+import numpy as np
 from flask import Flask, jsonify, request, send_from_directory, Response
 from supabase import create_client
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -67,7 +68,8 @@ SUPABASE_STORAGE_BUCKET = (
     os.environ.get("SUPABASE_STORAGE_BUCKET") or "media"
 ).strip()
 
-DUPLICATE_PHOTO_HASH_CACHE: Dict[Tuple[str, str], str] = {}
+DUPLICATE_PHOTO_PHASH_CACHE: Dict[Tuple[str, str], int] = {}
+DUPLICATE_PHOTO_HASH_DISTANCE = 6
 
 MAX_UPLOAD_BYTES = 100 * 1024 * 1024
 
@@ -509,9 +511,26 @@ def obtener_url_publica(
     return ""
 
 
+def calcular_hash_perceptual_imagen(contenido: bytes) -> int:
+    """Calcula una huella visual que tolera cambios de tamaño y compresión."""
+    datos = np.frombuffer(contenido, dtype=np.uint8)
+    imagen = cv2.imdecode(datos, cv2.IMREAD_GRAYSCALE)
+    if imagen is None or imagen.size == 0:
+        raise ValueError("El archivo seleccionado no contiene una imagen válida.")
+
+    reducida = cv2.resize(imagen, (32, 32), interpolation=cv2.INTER_AREA)
+    coeficientes = cv2.dct(np.float32(reducida))[:8, :8].flatten()
+    mediana = float(np.median(coeficientes[1:]))
+
+    resultado = 0
+    for bit in coeficientes > mediana:
+        resultado = (resultado << 1) | int(bit)
+    return resultado
+
+
 def buscar_foto_duplicada(contenido: bytes) -> Optional[Dict[str, Any]]:
-    """Busca una foto idéntica entre las fotos ya publicadas."""
-    hash_nuevo = hashlib.sha256(contenido).hexdigest()
+    """Compara la apariencia de la imagen, independientemente de su título."""
+    hash_nuevo = calcular_hash_perceptual_imagen(contenido)
     offset = 0
 
     while True:
@@ -543,7 +562,7 @@ def buscar_foto_duplicada(contenido: bytes) -> Optional[Dict[str, Any]]:
                 continue
 
             cache_key = (SUPABASE_STORAGE_BUCKET, media_path)
-            hash_existente = DUPLICATE_PHOTO_HASH_CACHE.get(cache_key)
+            hash_existente = DUPLICATE_PHOTO_PHASH_CACHE.get(cache_key)
             if hash_existente is None:
                 ruta_url = "/".join(quote_segmento(segmento) for segmento in segmentos)
                 url = (
@@ -565,10 +584,14 @@ def buscar_foto_duplicada(contenido: bytes) -> Optional[Dict[str, Any]]:
                         f"(HTTP {response.status_code})."
                     )
 
-                hash_existente = hashlib.sha256(response.content).hexdigest()
-                DUPLICATE_PHOTO_HASH_CACHE[cache_key] = hash_existente
+                try:
+                    hash_existente = calcular_hash_perceptual_imagen(response.content)
+                except ValueError:
+                    continue
+                DUPLICATE_PHOTO_PHASH_CACHE[cache_key] = hash_existente
 
-            if hash_existente == hash_nuevo:
+            distancia = (hash_existente ^ hash_nuevo).bit_count()
+            if distancia <= DUPLICATE_PHOTO_HASH_DISTANCE:
                 return publicacion
 
         if len(publicaciones) < 100:
@@ -990,6 +1013,8 @@ def crear_publicacion() -> Any:
             if seccion == "fotos":
                 try:
                     duplicada = buscar_foto_duplicada(contenido_archivo)
+                except ValueError as error:
+                    return respuesta_error(str(error), 400)
                 except Exception:
                     app.logger.exception("No se pudo comprobar si la foto está repetida.")
                     return respuesta_error(
@@ -1002,8 +1027,9 @@ def crear_publicacion() -> Any:
                         "success": False,
                         "duplicate": True,
                         "error": (
-                            "Esta imagen ya está publicada en Fotos y también "
-                            "aparece en el carrusel. No se subió otra copia."
+                            "Esta imagen ya está publicada o es prácticamente igual "
+                            "a una foto de Fotos. El título no influye en esta "
+                            "comprobación. No se subió otra copia."
                         )
                     }), 409
 
@@ -1054,8 +1080,8 @@ def crear_publicacion() -> Any:
             publicacion = filas[0] if filas else fila
 
         if seccion == "fotos" and media_path and contenido_archivo is not None:
-            DUPLICATE_PHOTO_HASH_CACHE[(SUPABASE_STORAGE_BUCKET, media_path)] = (
-                hashlib.sha256(contenido_archivo).hexdigest()
+            DUPLICATE_PHOTO_PHASH_CACHE[(SUPABASE_STORAGE_BUCKET, media_path)] = (
+                calcular_hash_perceptual_imagen(contenido_archivo)
             )
 
         return jsonify({"success": True, "publicacion": publicacion})

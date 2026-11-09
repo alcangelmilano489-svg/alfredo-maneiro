@@ -6,6 +6,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import cv2
+import numpy as np
+
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -258,7 +261,7 @@ class EditorialSectionsApiTests(unittest.TestCase):
         servidor.SUPABASE_CONFIG_ERROR = None
         servidor.SUPABASE_WRITE_KEY = "test-service-role-key"
         servidor.ADMIN_PASSWORD = "test-admin-password"
-        servidor.DUPLICATE_PHOTO_HASH_CACHE.clear()
+        servidor.DUPLICATE_PHOTO_PHASH_CACHE.clear()
         self.client = servidor.app.test_client()
 
     def test_public_read_returns_all_editorial_sections(self):
@@ -485,7 +488,7 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertEqual(deleted.status_code, 200)
         self.assertEqual(self.database.publications, [])
 
-    def test_finds_photo_duplicate_by_file_content(self):
+    def test_finds_visually_identical_photo_after_resize_and_reencoding(self):
         self.database.publications = [{
             "id": "existing-photo",
             "titulo": "Foto ya publicada",
@@ -493,7 +496,25 @@ class EditorialSectionsApiTests(unittest.TestCase):
             "mediaType": "image",
             "mediaPath": "publicaciones/fotos/existing.jpg",
         }]
-        stored_image = b"identical image content"
+        stored_image = (ROOT / "maneiro-foto-galeria-01.jpg").read_bytes()
+        original = cv2.imdecode(
+            np.frombuffer(stored_image, dtype=np.uint8),
+            cv2.IMREAD_COLOR,
+        )
+        self.assertIsNotNone(original)
+        alto, ancho = original.shape[:2]
+        resized = cv2.resize(
+            original,
+            (max(1, ancho // 2), max(1, alto // 2)),
+            interpolation=cv2.INTER_AREA,
+        )
+        ok, uploaded_image = cv2.imencode(
+            ".jpg",
+            resized,
+            [int(cv2.IMWRITE_JPEG_QUALITY), 55],
+        )
+        self.assertTrue(ok)
+        self.assertNotEqual(stored_image, uploaded_image.tobytes())
         storage_response = SimpleNamespace(
             status_code=200,
             is_success=True,
@@ -505,7 +526,7 @@ class EditorialSectionsApiTests(unittest.TestCase):
             "get",
             return_value=storage_response,
         ) as storage_get:
-            duplicate = servidor.buscar_foto_duplicada(stored_image)
+            duplicate = servidor.buscar_foto_duplicada(uploaded_image.tobytes())
 
         self.assertEqual(duplicate["id"], "existing-photo")
         storage_get.assert_called_once()
