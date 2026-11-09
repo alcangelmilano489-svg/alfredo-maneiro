@@ -125,7 +125,7 @@ body {
 .carrusel-container {
     width: 100%;
     background: #0d1b2a;
-    padding: 25px 0;
+    padding: 30px 0;
     overflow: hidden;
     position: relative;
     margin-bottom: 30px;
@@ -135,9 +135,9 @@ body {
 
 .carrusel-track {
     display: flex;
-    gap: 15px;
+    gap: 22px;
     width: max-content;
-    animation: moverCarrusel 42s linear infinite;
+    animation: moverCarrusel 55s linear infinite;
 }
 
 .carrusel-track:hover {
@@ -145,8 +145,8 @@ body {
 }
 
 .foto-caja {
-    width: 200px;
-    height: 155px;
+    width: clamp(300px, 34vw, 430px);
+    height: clamp(230px, 27vw, 325px);
     background: #1b263b;
     border-radius: 8px;
     overflow: hidden;
@@ -169,6 +169,21 @@ body {
     object-fit: contain;
     object-position: center;
     background: #0d1b2a;
+}
+
+@media (max-width: 600px) {
+    .carrusel-container {
+        padding: 18px 0;
+    }
+
+    .carrusel-track {
+        gap: 14px;
+    }
+
+    .foto-caja {
+        width: min(82vw, 330px);
+        height: min(66vw, 260px);
+    }
 }
 
 @keyframes moverCarrusel {

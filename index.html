@@ -47,26 +47,7 @@
     </nav>
 
     <div class="carrusel-container" aria-label="Archivo fotográfico">
-        <div class="carrusel-track">
-            <div class="foto-caja"><img src="/assets/neiro1.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro2.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro3.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro4.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro5.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro7.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro8.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro-foto-galeria-01.jpg" alt="Alfredo Maneiro junto a una niña"></div>
-            <div class="foto-caja"><img src="/assets/maneiro-foto-galeria-02.jpg" alt="Alfredo Maneiro junto a una mujer"></div>
-            <div class="foto-caja"><img src="/assets/neiro1.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro2.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro3.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro4.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro5.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro7.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro8.jpeg" alt="Archivo fotográfico"></div>
-            <div class="foto-caja"><img src="/assets/maneiro-foto-galeria-01.jpg" alt="Alfredo Maneiro junto a una niña"></div>
-            <div class="foto-caja"><img src="/assets/maneiro-foto-galeria-02.jpg" alt="Alfredo Maneiro junto a una mujer"></div>
-        </div>
+        <div class="carrusel-track"></div>
     </div>
 
     <section id="quienes-somos" class="seccion-fija">
@@ -533,6 +514,34 @@
             }
         }
 
+        var fotosHistoricasCarrusel = [
+            { src: '/assets/neiro1.jpeg', alt: 'Archivo fotográfico' },
+            { src: '/assets/maneiro2.jpeg', alt: 'Archivo fotográfico' },
+            { src: '/assets/maneiro3.jpeg', alt: 'Archivo fotográfico' },
+            { src: '/assets/maneiro4.jpeg', alt: 'Archivo fotográfico' },
+            { src: '/assets/maneiro5.jpeg', alt: 'Archivo fotográfico' },
+            { src: '/assets/maneiro7.jpeg', alt: 'Archivo fotográfico' },
+            { src: '/assets/maneiro8.jpeg', alt: 'Archivo fotográfico' },
+            { src: '/assets/maneiro-foto-galeria-01.jpg', alt: 'Alfredo Maneiro junto a una niña' },
+            { src: '/assets/maneiro-foto-galeria-02.jpg', alt: 'Alfredo Maneiro junto a una mujer' }
+        ];
+
+        function renderizarCarrusel(publicaciones) {
+            var track = document.querySelector('.carrusel-track');
+            if (!track) return;
+
+            var fotosPublicadas = (publicaciones || []).map(function(publicacion) {
+                var src = urlMultimedia(publicacion.mediaUrl);
+                if (!src) return null;
+                return { src: src, alt: publicacion.titulo || 'Foto publicada en la galería' };
+            }).filter(Boolean);
+            var fotos = fotosPublicadas.concat(fotosHistoricasCarrusel);
+            var elementos = fotos.concat(fotos).map(function(foto) {
+                return '<div class="foto-caja"><img src="' + escaparHtml(foto.src) + '" alt="' + escaparHtml(foto.alt) + '" loading="lazy"></div>';
+            });
+            track.innerHTML = elementos.join('');
+        }
+
         async function renderizarGaleria(seccion, idContenedor, tipo) {
             var contenedor = document.getElementById(idContenedor);
             if (!contenedor) return;
@@ -542,6 +551,7 @@
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 var data = await response.json();
                 var publicaciones = data.success ? data.publicaciones : [];
+                if (seccion === 'fotos') renderizarCarrusel(publicaciones);
                 if (!publicaciones.length) {
                     contenedor.innerHTML = '<p class="mensaje-vacio">No hay contenido publicado todavía.</p>';
                     return;
@@ -562,6 +572,7 @@
                 }).join('');
             } catch (error) {
                 console.error('Error al cargar la galería:', error);
+                if (seccion === 'fotos') renderizarCarrusel([]);
                 contenedor.innerHTML = '<p class="mensaje-vacio">No se pudo cargar el contenido.</p>';
             }
         }
