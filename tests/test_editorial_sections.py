@@ -307,6 +307,15 @@ class EditorialSectionsApiTests(unittest.TestCase):
         self.assertIn('id="admin-texto-quienes-somos"', admin_html)
         self.assertIn("publicarSeccionEspecifica('quienes-somos', event)", admin_html)
 
+    def test_obra_has_editor_and_public_page_keeps_long_content_with_safe_links(self):
+        public_html = (ROOT / "index.html").read_text(encoding="utf-8")
+        admin_html = (ROOT / "admin.html").read_text(encoding="utf-8")
+        self.assertIn('id="admin-texto-obra"', admin_html)
+        self.assertIn("publicarSeccionEspecifica('obra', event)", admin_html)
+        self.assertIn("renderizarContenidoEditorial(destino, texto)", public_html)
+        self.assertIn("agregarTextoEditorialConEnlaces", public_html)
+        self.assertNotIn("var textoObra = seccion === 'obra'", public_html)
+
     def test_admin_can_save_multipart_content_for_vida(self):
         response = self.client.put(
             "/api/secciones/vida",

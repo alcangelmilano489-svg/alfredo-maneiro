@@ -103,6 +103,20 @@
                 </div>
             </div>
 
+            <div class="admin-card">
+                <h2>📚 Sección Obra — texto y referencias</h2>
+                <p style="color:#64748b;font-size:14px;margin:0 0 14px;">Usa este espacio para la presentación, el contexto y las referencias bibliográficas. Los libros PDF se administran por separado más abajo.</p>
+                <label for="admin-titulo-obra">Título / subtítulo:</label>
+                <input type="text" id="admin-titulo-obra" placeholder="Obra escrita y pensamiento">
+                <label for="admin-texto-obra">Contenido editorial:</label>
+                <textarea id="admin-texto-obra" placeholder="Escribe sobre sus publicaciones, ideas y fuentes..." maxlength="100000"></textarea>
+                <button class="btn-actualizar" type="button" onclick="publicarSeccionEspecifica('obra', event)">Publicar texto en Obra</button>
+                <div class="admin-acciones-eliminar">
+                    <button class="btn-eliminar" id="btn-eliminar-seccion-obra" type="button" onclick="eliminarSeccionEditorial('obra')" disabled>Eliminar texto guardado de Obra</button>
+                    <span id="estado-seccion-obra" aria-live="polite">Comprobando contenido guardado...</span>
+                </div>
+            </div>
+
             <!-- 3. OBRAS: ÚNICAMENTE LIBROS EN PDF -->
             <div class="admin-card">
                 <h2>📚 Obras — libros en PDF</h2>
@@ -373,11 +387,13 @@
             let textoId = 'admin-texto-' + nombreSeccion;
             let archivoId = 'admin-archivo-' + nombreSeccion;
 
-            let titulo = document.getElementById(tituloId).value.trim();
-            let texto = document.getElementById(textoId).value.trim();
+            let tituloElemento = document.getElementById(tituloId);
+            let textoElemento = document.getElementById(textoId);
+            let titulo = tituloElemento ? tituloElemento.value.trim() : '';
+            let texto = textoElemento ? textoElemento.value.trim() : '';
             let inputArchivo = document.getElementById(archivoId);
 
-            if (!titulo && !texto && (!inputArchivo.files || !inputArchivo.files[0])) {
+            if (!titulo && !texto && !(inputArchivo && inputArchivo.files && inputArchivo.files[0])) {
                 alert("Debes rellenar al menos un título, texto o adjuntar un archivo para la sección " + nombreSeccion + ".");
                 return;
             }
@@ -391,7 +407,7 @@
                 const formData = new FormData();
                 const contenido = [titulo, texto].filter(Boolean).join('\n\n');
                 formData.append('contenido', contenido);
-                if (inputArchivo.files && inputArchivo.files[0]) {
+                if (inputArchivo && inputArchivo.files && inputArchivo.files[0]) {
                     formData.append('archivo', inputArchivo.files[0]);
                 }
 
@@ -405,9 +421,9 @@
                     throw new Error(result.error || 'No se pudo guardar la publicación.');
                 }
 
-                document.getElementById(tituloId).value = "";
-                document.getElementById(textoId).value = "";
-                inputArchivo.value = "";
+                if (tituloElemento) tituloElemento.value = "";
+                if (textoElemento) textoElemento.value = "";
+                if (inputArchivo) inputArchivo.value = "";
 
                 alert("¡Publicación guardada con éxito en " + nombreSeccion.toUpperCase() + "!");
                 await actualizarEstadoSeccionesEditoriales();
@@ -698,9 +714,12 @@
                 });
                 const result = await leerJsonRespuesta(response);
                 if (!response.ok || !result.success) throw new Error(result.error || 'No se pudo eliminar el contenido.');
-                document.getElementById('admin-titulo-' + seccion).value = '';
-                document.getElementById('admin-texto-' + seccion).value = '';
-                document.getElementById('admin-archivo-' + seccion).value = '';
+                const titulo = document.getElementById('admin-titulo-' + seccion);
+                const texto = document.getElementById('admin-texto-' + seccion);
+                const archivo = document.getElementById('admin-archivo-' + seccion);
+                if (titulo) titulo.value = '';
+                if (texto) texto.value = '';
+                if (archivo) archivo.value = '';
                 alert(result.already_empty
                     ? 'No había contenido publicado en ' + nombre + '; se limpió el borrador.'
                     : 'Contenido de ' + nombre + ' eliminado.');

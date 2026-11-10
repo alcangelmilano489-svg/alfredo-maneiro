@@ -659,6 +659,67 @@
             }
         }
 
+        function agregarTextoEditorialConEnlaces(destino, texto) {
+            var expresion = /(https?:\/\/[^\s]+)/g;
+            var indice = 0;
+            var coincidencia;
+
+            while ((coincidencia = expresion.exec(texto)) !== null) {
+                destino.appendChild(document.createTextNode(texto.slice(indice, coincidencia.index)));
+                var enlaceCompleto = coincidencia[0];
+                var puntuacion = '';
+                var sufijo = enlaceCompleto.match(/[.,;:!?]+$/);
+                if (sufijo) {
+                    puntuacion = sufijo[0];
+                    enlaceCompleto = enlaceCompleto.slice(0, -puntuacion.length);
+                }
+
+                try {
+                    var url = new URL(enlaceCompleto);
+                    if (url.protocol === 'http:' || url.protocol === 'https:') {
+                        var enlace = document.createElement('a');
+                        enlace.href = url.href;
+                        enlace.textContent = enlaceCompleto;
+                        enlace.target = '_blank';
+                        enlace.rel = 'noopener noreferrer';
+                        destino.appendChild(enlace);
+                    } else {
+                        destino.appendChild(document.createTextNode(enlaceCompleto));
+                    }
+                } catch (error) {
+                    destino.appendChild(document.createTextNode(enlaceCompleto));
+                }
+                if (puntuacion) destino.appendChild(document.createTextNode(puntuacion));
+                indice = coincidencia.index + coincidencia[0].length;
+            }
+
+            destino.appendChild(document.createTextNode(texto.slice(indice)));
+        }
+
+        function renderizarContenidoEditorial(destino, texto) {
+            destino.textContent = '';
+            var contenido = String(texto || '').trim();
+            if (!contenido) {
+                var vacio = document.createElement('p');
+                vacio.textContent = 'Aún no hay contenido publicado.';
+                destino.appendChild(vacio);
+                return;
+            }
+
+            contenido.split(/\n{2,}/).forEach(function(parrafo) {
+                var elemento = document.createElement('p');
+                elemento.className = 'contenido-editorial-parrafo';
+                var lineas = parrafo.split('\n');
+                lineas.forEach(function(linea, indice) {
+                    agregarTextoEditorialConEnlaces(elemento, linea);
+                    if (indice < lineas.length - 1) {
+                        elemento.appendChild(document.createElement('br'));
+                    }
+                });
+                destino.appendChild(elemento);
+            });
+        }
+
         async function renderizarSeccionesEditoriales() {
             try {
                 var response = await fetch('/api/secciones', { cache: 'no-store' });
@@ -672,10 +733,7 @@
                     var destino = document.getElementById('contenido-' + seccion);
                     var texto = contenido[seccion];
                     if (destino && typeof texto === 'string') {
-                        var textoObra = seccion === 'obra' && texto.length > 1000
-                            ? 'Libros y documentos sobre el pensamiento y legado de Alfredo Maneiro. Selecciona una obra para leerla en línea o descargarla en PDF.'
-                            : texto;
-                        destino.textContent = textoObra.trim() ? textoObra : 'Aún no hay contenido publicado.';
+                        renderizarContenidoEditorial(destino, texto);
                         var imagenUrl = urlMultimedia(archivos[seccion]);
                         if (imagenUrl) {
                             var imagen = document.createElement('img');

@@ -231,6 +231,10 @@ body {
     overflow-wrap: anywhere;
 }
 
+.seccion-fija .contenido-editorial-parrafo {
+    margin: 0 0 1em;
+}
+
 .seccion-fija .contenido-seccion img,
 .seccion-fija .contenido-seccion video,
 .seccion-fija .contenido-seccion iframe {
